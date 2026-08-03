@@ -1,9 +1,11 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys, ProductStatus } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules, ProductStatus } from "@medusajs/framework/utils"
 import {
+  createInventoryItemsWorkflow,
   createInventoryLevelsWorkflow,
   createProductCategoriesWorkflow,
   createProductsWorkflow,
+  updateInventoryItemsWorkflow,
   updateInventoryLevelsWorkflow,
 } from "@medusajs/medusa/core-flows"
 import { XMLParser } from "fast-xml-parser"
@@ -166,15 +168,23 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
       entity: "inventory_item",
       fields: ["id", "sku", "title", "location_levels.id", "location_levels.location_id", "location_levels.stocked_quantity"],
     })
+    const {data: productVariants} = await query.graph({
+      entity: "product_variant",
+      fields: ["id", "sku", "product.title"],
+    })
     const bySku = new Map(inventoryItems.map((item: any) => [normalize(item.sku).toLowerCase(), item]))
+    const variantBySku = new Map(productVariants.map((variant: any) => [normalize(variant.sku).toLowerCase(), variant]))
     const matched: any[] = []
     const toCreate: ParsedRow[] = []
-    const needsLevel: ParsedRow[] = []
+    const toRepair: any[] = []
+    const needsLevel: any[] = []
     for (const row of rows) {
       const item: any = bySku.get(row.sku.toLowerCase())
+      const variant: any = variantBySku.get(row.sku.toLowerCase())
       const level = item?.location_levels?.[0]
-      if (!item) toCreate.push(row)
-      else if (!level) needsLevel.push(row)
+      if (!item && variant) toRepair.push({...row, variant_id: variant.id})
+      else if (!item) toCreate.push(row)
+      else if (!level) needsLevel.push({...row, title: item.title, inventory_item_id: item.id})
       else matched.push({...row, title: item.title, previous_quantity: Number(level.stocked_quantity), inventory_item_id: item.id, level_id: level.id, location_id: level.location_id})
     }
 
@@ -182,6 +192,19 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
       const {data: locations} = await query.graph({entity: "stock_location", fields: ["id", "name"]})
       const location = locations.find((item: any) => /manchester/i.test(item.name)) ?? locations[0]
       if (!location) throw new Error("Medusa has no stock location configured.")
+
+      if (toRepair.length) {
+        const link = req.scope.resolve(ContainerRegistrationKeys.LINK)
+        for (const batch of chunks(toRepair, 100)) {
+          const {result: repairedItems} = await createInventoryItemsWorkflow(req.scope).run({
+            input: {items: batch.map((row) => ({sku: row.sku, title: row.name, location_levels: [{location_id: location.id, stocked_quantity: row.quantity}]}))},
+          })
+          await link.create(repairedItems.map((item: any, index: number) => ({
+            [Modules.PRODUCT]: {variant_id: batch[index].variant_id},
+            [Modules.INVENTORY]: {inventory_item_id: item.id},
+          })))
+        }
+      }
 
       if (toCreate.length) {
         const [{data: profiles}, {data: salesChannels}, {data: existingCategories}] = await Promise.all([
@@ -216,10 +239,20 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
                 category_ids: categoryByName.get(row.category.toLowerCase()) ? [categoryByName.get(row.category.toLowerCase()).id] : [],
                 metadata: {clover_import: true, clover_product_code: row.productCode || null},
                 options: [{title: "Format", values: ["Standard"]}],
-                variants: [{title: "Standard", sku: row.sku, manage_inventory: true, options: {Format: "Standard"}, prices: [{currency_code: "usd", amount: row.price}]}],
+                variants: [{title: row.name, sku: row.sku, manage_inventory: true, options: {Format: "Standard"}, prices: [{currency_code: "usd", amount: row.price}]}],
                 sales_channels: [{id: salesChannel.id}],
               })),
             },
+          })
+        }
+      }
+
+      const inventoryItemsToRename = [...matched, ...needsLevel]
+        .filter((item) => normalize(item.title).toLowerCase() === "standard")
+      if (inventoryItemsToRename.length) {
+        for (const batch of chunks(inventoryItemsToRename, 100)) {
+          await updateInventoryItemsWorkflow(req.scope).run({
+            input: {updates: batch.map((item) => ({id: item.inventory_item_id, title: item.name}))},
           })
         }
       }
@@ -250,13 +283,16 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
       total_rows: rows.length,
       matched_count: matched.length,
       created_count: toCreate.length,
+      repaired_count: toRepair.length,
       level_count: needsLevel.length,
       missing_count: 0,
       matched: matched.slice(0, 100).map(({inventory_item_id, level_id, location_id, description, category, price, productCode, hidden, ...item}) => item),
       created: toCreate.slice(0, 100).map(({row, sku, name, quantity, price, category}) => ({row, sku, name, quantity, price, category})),
+      repaired: toRepair.slice(0, 100).map(({row, sku, name, quantity}) => ({row, sku, name, quantity})),
       missing: [],
     })
   } catch (error) {
-    return res.status(400).json({message: error instanceof Error ? error.message : "Unable to import workbook."})
+    const message = error instanceof Error ? error.message : normalize((error as any)?.message || (error as any)?.error || error)
+    return res.status(400).json({message: message || "Unable to import workbook."})
   }
 }
