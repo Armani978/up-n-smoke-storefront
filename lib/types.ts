@@ -52,15 +52,28 @@ export type AdminProduct = StoreProduct & {
   inventoryLevelId?: string;
 };
 
+export type AdminOrderLine = {
+  id: string;
+  title: string;
+  variantTitle: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
 export type AdminOrder = {
   id: string;
   displayId: string;
   email: string;
   customerName: string;
+  phone: string;
   createdAt: string;
   total: number;
   currency: string;
   itemCount: number;
+  lineItems: AdminOrderLine[];
   pickupWindow: string;
+  pickupNotes: string;
   pickupStatus: PickupStatus;
 };

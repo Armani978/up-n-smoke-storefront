@@ -66,23 +66,40 @@ export async function listAdminProducts(session: EmployeeSession): Promise<Admin
 }
 
 export async function listAdminOrders(session: EmployeeSession): Promise<AdminOrder[]> {
-  const result = await adminFetch<{ orders: Array<Record<string, unknown>> }>(session, "/admin/orders?limit=100&fields=*items,*customer,*shipping_address");
+  const fields = "*items,*items.variant,*items.product,*customer,*shipping_address";
+  const result = await adminFetch<{ orders: Array<Record<string, unknown>> }>(session, `/admin/orders?limit=100&fields=${encodeURIComponent(fields)}`);
   return (result?.orders ?? []).map((order) => {
     const customer = (order.customer ?? {}) as Record<string, unknown>;
     const shipping = (order.shipping_address ?? {}) as Record<string, unknown>;
     const metadata = (order.metadata ?? {}) as Record<string, unknown>;
     const items = (order.items ?? []) as Array<Record<string, unknown>>;
+    const lineItems = items.map((item) => {
+      const quantity = Number(item.quantity ?? 0);
+      const unitPrice = Number(item.unit_price ?? 0);
+      return {
+        id: String(item.id),
+        title: String(item.product_title ?? item.title ?? "Untitled item"),
+        variantTitle: String(item.variant_title ?? item.subtitle ?? ""),
+        sku: String(item.variant_sku ?? ""),
+        quantity,
+        unitPrice,
+        total: Number(item.total ?? unitPrice * quantity),
+      };
+    });
     const pickupStatus = String(metadata.pickup_status ?? "pending") as PickupStatus;
     return {
       id: String(order.id),
       displayId: String(order.display_id ?? order.id),
       email: String(order.email ?? "Guest"),
       customerName: [customer.first_name ?? shipping.first_name, customer.last_name ?? shipping.last_name].filter(Boolean).join(" ") || "Guest pickup",
+      phone: String(shipping.phone ?? customer.phone ?? ""),
       createdAt: String(order.created_at ?? new Date().toISOString()),
       total: Number(order.total ?? 0),
       currency: String(order.currency_code ?? "USD"),
-      itemCount: items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0),
+      itemCount: lineItems.reduce((sum, item) => sum + item.quantity, 0),
+      lineItems,
       pickupWindow: String(metadata.pickup_window ?? "ASAP"),
+      pickupNotes: String(metadata.pickup_notes ?? ""),
       pickupStatus,
     };
   });
