@@ -11,6 +11,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireEmployee("products.write");
   const body = await request.json() as Record<string, unknown>;
+  const thumbnail = String(body.image ?? "").trim();
+  if (thumbnail && !/^(https:\/\/|\/(?!\/))/i.test(thumbnail)) {
+    return NextResponse.json({ error: "Product photo must be an HTTPS URL or a local /product-images path." }, { status: 400 });
+  }
   const [profiles, channels] = await Promise.all([
     adminFetch<{ shipping_profiles: Array<{ id: string }> }>(session, "/admin/shipping-profiles?limit=10"),
     adminFetch<{ sales_channels: Array<{ id: string }> }>(session, "/admin/sales-channels?limit=10"),
@@ -23,6 +27,7 @@ export async function POST(request: Request) {
     body: JSON.stringify({
       title: body.name,
       description: body.description,
+      thumbnail: thumbnail || undefined,
       status: "published",
       shipping_profile_id: profile.id,
       sales_channels: [{ id: channel.id }],

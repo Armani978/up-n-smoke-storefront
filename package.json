@@ -16,6 +16,7 @@
     "medusa:build": "npm --prefix medusa-backend run build",
     "medusa:migrate": "npm --prefix medusa-backend run db:migrate",
     "medusa:seed": "npm --prefix medusa-backend run seed",
+    "medusa:photos": "npm --prefix medusa-backend run photos",
     "medusa:user": "npm --prefix medusa-backend run user --"
   },
   "dependencies": {

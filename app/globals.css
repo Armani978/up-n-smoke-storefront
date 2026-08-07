@@ -98,8 +98,8 @@ button { cursor: pointer; }
 .signal-ribbon span { font: 900 clamp(25px, 4vw, 54px)/1 var(--font-display); letter-spacing: .04em; text-transform: uppercase; transform: rotate(-2deg); }
 .signal-image { height: 355px; display: block; position: relative; margin: -8px 18px 0; border: 1px solid var(--ink); border-radius: 20px; overflow: hidden; background: var(--paper); }
 .is-featured .signal-image { height: 610px; }
-.signal-image img { object-fit: cover; filter: saturate(.55) contrast(1.05); transition: transform .6s, filter .5s; }
-.signal-card:hover .signal-image img { transform: scale(1.035); filter: saturate(.8) contrast(1.05); }
+.signal-image img { object-fit: contain; padding: 22px; background: white; transition: transform .6s; }
+.signal-card:hover .signal-image img { transform: scale(1.035); }
 .signal-index { position: absolute; top: 12px; left: 12px; background: var(--black); color: var(--acid); border-radius: 999px; padding: 7px 10px; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
 .signal-bubble, .detail-bubble { position: absolute; z-index: 2; width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; align-content: center; background: var(--signal); color: var(--ink); border: 1px solid var(--ink); font: 900 22px/.9 var(--font-display); text-transform: uppercase; text-align: center; box-shadow: 4px 4px 0 var(--ink); }
 .signal-bubble small, .detail-bubble small { font: 800 8px/1.4 var(--font-body); letter-spacing: .1em; }
@@ -152,7 +152,7 @@ button { cursor: pointer; }
 .back-link svg { width: 15px; }
 .product-stage { display: grid; grid-template-columns: 1.15fr .85fr; min-height: 720px; border: 1px solid var(--ink); border-radius: 30px; overflow: hidden; background: white; }
 .product-art { position: relative; min-height: 700px; background: var(--signal); overflow: hidden; border-right: 1px solid var(--ink); }
-.product-art > img { object-fit: cover; width: calc(100% - 60px)!important; height: calc(100% - 130px)!important; inset: 100px 30px 30px!important; border-radius: 20px; border: 1px solid var(--ink); filter: saturate(.6); }
+.product-art > img { object-fit: contain; padding: 30px; background: white; width: calc(100% - 60px)!important; height: calc(100% - 130px)!important; inset: 100px 30px 30px!important; border-radius: 20px; border: 1px solid var(--ink); }
 .product-ribbon { position: absolute; z-index: 3; top: 22px; left: -2%; width: 104%; background: var(--yellow); border: 1px solid var(--ink); text-align: center; padding: 12px; font: 900 clamp(38px, 6vw, 72px)/1 var(--font-display); text-transform: uppercase; transform: rotate(-2deg); box-shadow: 7px 7px 0 var(--ink); }
 .detail-1 { top: 21%; left: 6%; }
 .detail-2 { right: 5%; top: 43%; }

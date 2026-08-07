@@ -5,6 +5,7 @@ import {
   createInventoryLevelsWorkflow,
   createProductCategoriesWorkflow,
   createProductsWorkflow,
+  updateProductsWorkflow,
   updateInventoryItemsWorkflow,
   updateInventoryLevelsWorkflow,
 } from "@medusajs/medusa/core-flows"
@@ -25,6 +26,7 @@ type ParsedRow = {
   category: string
   description: string
   productCode: string
+  image: string
   hidden: boolean
 }
 
@@ -35,6 +37,7 @@ const NAME_HEADERS = ["name", "item name", "product name", "title"]
 const PRICE_HEADERS = ["price", "retail price", "sell price"]
 const CATEGORY_HEADERS = ["categories", "category", "category name", "department"]
 const DESCRIPTION_HEADERS = ["description", "desc"]
+const IMAGE_HEADERS = ["image", "image url", "image_url", "photo", "photo url", "thumbnail"]
 const HIDDEN_HEADERS = ["hidden?", "hidden", "show in register app"]
 
 const normalize = (value: unknown) => String(value ?? "").trim()
@@ -89,6 +92,7 @@ function rowsFromSheet(cellsByRow: Map<number, Map<number, unknown>>) {
   const priceColumn = firstColumn(headers, PRICE_HEADERS)
   const categoryColumn = firstColumn(headers, CATEGORY_HEADERS)
   const descriptionColumn = firstColumn(headers, DESCRIPTION_HEADERS)
+  const imageColumn = firstColumn(headers, IMAGE_HEADERS)
   const hiddenColumn = firstColumn(headers, HIDDEN_HEADERS)
   if (!skuColumn || !quantityColumn) return []
 
@@ -115,6 +119,7 @@ function rowsFromSheet(cellsByRow: Map<number, Map<number, unknown>>) {
       category: categoryColumn ? normalize(row.get(categoryColumn)) || "Uncategorized" : "Uncategorized",
       description: descriptionColumn ? normalize(row.get(descriptionColumn)) : "",
       productCode,
+      image: imageColumn ? normalize(row.get(imageColumn)) : "",
       hidden: hiddenValue === "yes" || hiddenValue === "true" || hiddenValue === "1" || hiddenValue === "no" && headers.has("show in register app"),
     })
   }
@@ -163,6 +168,8 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
     if (!req.body?.file_base64) return res.status(400).json({message: "An XLSX workbook is required."})
 
     const rows = await parseWorkbook(req.body.file_base64)
+    const invalidPhoto = rows.find((row) => row.image && !/^(https:\/\/|\/(?!\/))/i.test(row.image))
+    if (invalidPhoto) throw new Error(`Row ${invalidPhoto.row}: Product photo must be an HTTPS URL or a local /product-images path.`)
     const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
     const {data: inventoryItems} = await query.graph({
       entity: "inventory_item",
@@ -170,7 +177,7 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
     })
     const {data: productVariants} = await query.graph({
       entity: "product_variant",
-      fields: ["id", "sku", "product.title"],
+      fields: ["id", "sku", "product.id", "product.title", "product.thumbnail", "product.metadata"],
     })
     const bySku = new Map(inventoryItems.map((item: any) => [normalize(item.sku).toLowerCase(), item]))
     const variantBySku = new Map(productVariants.map((variant: any) => [normalize(variant.sku).toLowerCase(), variant]))
@@ -206,6 +213,23 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
         }
       }
 
+      const productPhotoUpdates = rows.flatMap((row) => {
+        const variant: any = variantBySku.get(row.sku.toLowerCase())
+        if (!row.image || !variant?.product?.id || variant.product.thumbnail === row.image) return []
+        return [{
+          id: variant.product.id,
+          thumbnail: row.image,
+          metadata: {
+            ...(variant.product.metadata ?? {}),
+            photo_source: "inventory_import",
+            photo_sku: row.sku,
+          },
+        }]
+      })
+      for (const batch of chunks(productPhotoUpdates, 100)) {
+        await updateProductsWorkflow(req.scope).run({input: {products: batch}})
+      }
+
       if (toCreate.length) {
         const [{data: profiles}, {data: salesChannels}, {data: existingCategories}] = await Promise.all([
           query.graph({entity: "shipping_profile", fields: ["id", "name", "type"]}),
@@ -234,6 +258,7 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
                 title: row.name,
                 handle: safeHandle(row.sku, productIndex++),
                 description: row.description || "Available for in-store pickup.",
+                thumbnail: row.image || undefined,
                 status: row.hidden ? ProductStatus.DRAFT : ProductStatus.PUBLISHED,
                 shipping_profile_id: profile.id,
                 category_ids: categoryByName.get(row.category.toLowerCase()) ? [categoryByName.get(row.category.toLowerCase()).id] : [],
@@ -284,9 +309,10 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
       matched_count: matched.length,
       created_count: toCreate.length,
       repaired_count: toRepair.length,
+      photo_updated_count: rows.filter((row) => row.image && variantBySku.has(row.sku.toLowerCase())).length,
       level_count: needsLevel.length,
       missing_count: 0,
-      matched: matched.slice(0, 100).map(({inventory_item_id, level_id, location_id, description, category, price, productCode, hidden, ...item}) => item),
+      matched: matched.slice(0, 100).map(({inventory_item_id, level_id, location_id, description, category, price, productCode, image, hidden, ...item}) => item),
       created: toCreate.slice(0, 100).map(({row, sku, name, quantity, price, category}) => ({row, sku, name, quantity, price, category})),
       repaired: toRepair.slice(0, 100).map(({row, sku, name, quantity}) => ({row, sku, name, quantity})),
       missing: [],

@@ -9,9 +9,13 @@ export async function PATCH(request: Request, { params }: Context) {
   const session = await requireEmployee("products.write");
   const { id } = await params;
   const body = await request.json() as Record<string, unknown>;
+  const thumbnail = String(body.image ?? "").trim();
+  if (thumbnail && !/^(https:\/\/|\/(?!\/))/i.test(thumbnail)) {
+    return NextResponse.json({ error: "Product photo must be an HTTPS URL or a local /product-images path." }, { status: 400 });
+  }
   const result = await adminFetch(session, `/admin/products/${id}`, {
     method: "POST",
-    body: JSON.stringify({ title: body.name, description: body.description, status: body.status }),
+    body: JSON.stringify({ title: body.name, description: body.description, status: body.status, thumbnail: thumbnail || null }),
   });
   if (!result) return NextResponse.json({ error: "Unable to update product." }, { status: 502 });
   revalidateTag("catalog", "max");

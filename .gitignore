@@ -10,3 +10,4 @@ outputs/
 .vercel/
 next-env.d.ts
 *.tsbuildinfo
+.codex-runtime/
