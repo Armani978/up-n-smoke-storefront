@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100" role="img" aria-labelledby="title desc">
+  <title id="title">Up N Smoke product placeholder</title>
+  <desc id="desc">Black and acid-yellow abstract product package.</desc>
+  <rect width="900" height="1100" fill="#f4ff35"/>
+  <circle cx="770" cy="180" r="280" fill="#0a0b08" opacity=".12"/>
+  <path d="M0 840 900 590v510H0z" fill="#0a0b08"/>
+  <g transform="translate(290 150) rotate(-8 160 350)">
+    <rect x="20" y="0" width="280" height="710" rx="70" fill="#0a0b08"/>
+    <rect x="52" y="48" width="216" height="360" rx="38" fill="#171912" stroke="#f4ff35" stroke-width="6"/>
+    <circle cx="160" cy="535" r="64" fill="#f4ff35"/>
+    <path d="M130 535h60M160 505v60" stroke="#0a0b08" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <text x="54" y="925" fill="#f4ff35" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900">UP N SMOKE</text>
+  <text x="58" y="985" fill="#fff" font-family="Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="8">PRODUCT SIGNAL</text>
+</svg>

@@ -1,0 +1,16 @@
+import { NextResponse } from "next/server";
+import { requireEmployee } from "@/lib/auth/session";
+import { adminFetch } from "@/lib/medusa/admin";
+import type { PickupStatus } from "@/lib/types";
+
+const allowed: PickupStatus[] = ["pending", "accepted", "preparing", "ready", "arrived", "completed", "cancelled"];
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await requireEmployee("orders.write");
+  const { id } = await params;
+  const { pickupStatus } = await request.json() as { pickupStatus: PickupStatus };
+  if (!allowed.includes(pickupStatus)) return NextResponse.json({ error: "Invalid pickup status." }, { status: 400 });
+  const existing = await adminFetch<{ order: { metadata?: Record<string, unknown> } }>(session, `/admin/orders/${id}`);
+  const result = await adminFetch(session, `/admin/orders/${id}`, { method: "POST", body: JSON.stringify({ metadata: { ...(existing?.order.metadata ?? {}), pickup_status: pickupStatus } }) });
+  return result ? NextResponse.json(result) : NextResponse.json({ error: "Unable to update order." }, { status: 502 });
+}

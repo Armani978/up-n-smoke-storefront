@@ -6,3 +6,7 @@ dist/
 .medusa/
 .playwright-cli/
 outputs/
+.next/
+.vercel/
+next-env.d.ts
+*.tsbuildinfo

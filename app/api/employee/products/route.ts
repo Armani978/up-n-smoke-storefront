@@ -1,0 +1,36 @@
+import { revalidateTag } from "next/cache";
+import { NextResponse } from "next/server";
+import { requireEmployee } from "@/lib/auth/session";
+import { adminFetch, listAdminProducts } from "@/lib/medusa/admin";
+
+export async function GET() {
+  const session = await requireEmployee("products.read");
+  return NextResponse.json({ products: await listAdminProducts(session) });
+}
+
+export async function POST(request: Request) {
+  const session = await requireEmployee("products.write");
+  const body = await request.json() as Record<string, unknown>;
+  const [profiles, channels] = await Promise.all([
+    adminFetch<{ shipping_profiles: Array<{ id: string }> }>(session, "/admin/shipping-profiles?limit=10"),
+    adminFetch<{ sales_channels: Array<{ id: string }> }>(session, "/admin/sales-channels?limit=10"),
+  ]);
+  const profile = profiles?.shipping_profiles?.[0];
+  const channel = channels?.sales_channels?.[0];
+  if (!profile || !channel) return NextResponse.json({ error: "Medusa shipping profile or sales channel is missing." }, { status: 409 });
+  const result = await adminFetch(session, "/admin/products", {
+    method: "POST",
+    body: JSON.stringify({
+      title: body.name,
+      description: body.description,
+      status: "published",
+      shipping_profile_id: profile.id,
+      sales_channels: [{ id: channel.id }],
+      options: [{ title: "Format", values: ["Standard"] }],
+      variants: [{ title: "Standard", sku: body.sku, manage_inventory: true, options: { Format: "Standard" }, prices: [{ currency_code: "usd", amount: Number(body.price ?? 0) }] }],
+    }),
+  });
+  if (!result) return NextResponse.json({ error: "Medusa rejected the product." }, { status: 502 });
+  revalidateTag("catalog", "max");
+  return NextResponse.json(result, { status: 201 });
+}

@@ -1,0 +1,22 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { roleForEmail } from "@/lib/auth/roles";
+import { setEmployeeSession } from "@/lib/auth/session";
+import { MEDUSA_BACKEND_URL } from "@/lib/medusa/config";
+
+export async function POST(request: NextRequest) {
+  const data = await request.formData();
+  const email = String(data.get("email") ?? "").trim().toLowerCase();
+  const password = String(data.get("password") ?? "");
+  const response = await fetch(`${MEDUSA_BACKEND_URL}/auth/user/emailpass`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+  });
+  const payload = (await response.json()) as { token?: string; message?: string };
+  if (!response.ok || !payload.token) {
+    return NextResponse.redirect(new URL(`/employee/login?error=${encodeURIComponent(payload.message ?? "Invalid employee credentials.")}`, request.url), 303);
+  }
+  await setEmployeeSession({ email, token: payload.token, role: roleForEmail(email) });
+  return NextResponse.redirect(new URL("/employee/dashboard", request.url), 303);
+}

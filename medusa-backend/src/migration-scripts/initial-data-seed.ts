@@ -7,7 +7,7 @@ const catalog=[
  ['Nova Pod X','VPE-002','Pod Systems',34.99,9,'Pocket-ready pod system with fast USB-C charging.','https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=700&q=80'],
  ['Fogger 8000','DSP-001','Disposables',19.99,24,'Rechargeable disposable with smooth consistent output.','https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=700&q=80'],
  ['Pulse Bar','DSP-002','Disposables',12.99,4,'Compact grab-and-go device in rotating flavor drops.','https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?auto=format&fit=crop&w=700&q=80'],
- ['Charge Case','ACC-001','Accessories',24.99,7,'Protective charging case for compatible devices.','https://images.unsplash.com/photo-1609592806596-b43bada2f39c?auto=format&fit=crop&w=700&q=80'],
+ ['Charge Case','ACC-001','Accessories',24.99,7,'Protective charging case for compatible devices.','/product-placeholder.svg'],
  ['EXO Tank','ACC-002','Accessories',29.99,0,'Durable replacement tank with adjustable airflow.','https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=700&q=80'],
 ] as const
 
