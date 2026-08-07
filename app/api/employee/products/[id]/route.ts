@@ -1,12 +1,14 @@
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { requireEmployee } from "@/lib/auth/session";
+import { employeeApiAccess } from "@/lib/auth/session";
 import { adminFetch } from "@/lib/medusa/admin";
 
 type Context = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Context) {
-  const session = await requireEmployee("products.write");
+  const access = await employeeApiAccess("products.write");
+  if ("response" in access) return access.response;
+  const { session } = access;
   const { id } = await params;
   const body = await request.json() as Record<string, unknown>;
   const thumbnail = String(body.image ?? "").trim();
@@ -23,7 +25,9 @@ export async function PATCH(request: Request, { params }: Context) {
 }
 
 export async function DELETE(_: Request, { params }: Context) {
-  const session = await requireEmployee("products.write");
+  const access = await employeeApiAccess("products.write");
+  if ("response" in access) return access.response;
+  const { session } = access;
   const { id } = await params;
   const result = await adminFetch(session, `/admin/products/${id}`, { method: "POST", body: JSON.stringify({ status: "draft" }) });
   if (!result) return NextResponse.json({ error: "Unable to archive product." }, { status: 502 });

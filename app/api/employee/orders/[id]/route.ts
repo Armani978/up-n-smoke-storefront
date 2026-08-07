@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireEmployee } from "@/lib/auth/session";
+import { employeeApiAccess } from "@/lib/auth/session";
 import { adminFetch } from "@/lib/medusa/admin";
 import type { PickupStatus } from "@/lib/types";
 
 const allowed: PickupStatus[] = ["pending", "accepted", "preparing", "ready", "arrived", "completed", "cancelled"];
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireEmployee("orders.write");
+  const access = await employeeApiAccess("orders.write");
+  if ("response" in access) return access.response;
+  const { session } = access;
   const { id } = await params;
   const { pickupStatus } = await request.json() as { pickupStatus: PickupStatus };
   if (!allowed.includes(pickupStatus)) return NextResponse.json({ error: "Invalid pickup status." }, { status: 400 });

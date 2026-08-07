@@ -2,11 +2,14 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { EmployeeSession } from "@/lib/types";
-import { hasPermission, type Permission } from "@/lib/auth/roles";
+import { EMPLOYEE_COOKIE, LEGACY_EMPLOYEE_COOKIE } from "@/lib/auth/constants";
+import { hasPermission, roleForEmail, type Permission } from "@/lib/auth/roles";
+import { MEDUSA_BACKEND_URL } from "@/lib/medusa/config";
 
-const EMPLOYEE_COOKIE = "uns_employee_session";
 const CUSTOMER_COOKIE = "uns_customer_session";
 const TWELVE_HOURS = 60 * 60 * 12;
 const TWO_WEEKS = 60 * 60 * 24 * 14;
@@ -53,10 +56,11 @@ export async function setEmployeeSession(session: Omit<EmployeeSession, "expires
   const store = await cookies();
   store.set(EMPLOYEE_COOKIE, encode({ ...session, expiresAt: Date.now() + TWELVE_HOURS * 1000 }), {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: TWELVE_HOURS,
+    priority: "high",
   });
 }
 
@@ -71,9 +75,25 @@ export async function setCustomerSession(session: Omit<CustomerSession, "expires
   });
 }
 
-export async function getEmployeeSession() {
-  return valid(decode<EmployeeSession>((await cookies()).get(EMPLOYEE_COOKIE)?.value));
-}
+export const getEmployeeSession = cache(async () => {
+  const session = valid(decode<EmployeeSession>((await cookies()).get(EMPLOYEE_COOKIE)?.value));
+  if (!session) return null;
+  const role = roleForEmail(session.email);
+  if (!role) return null;
+  try {
+    const response = await fetch(`${MEDUSA_BACKEND_URL}/admin/users/me`, {
+      headers: { Authorization: `Bearer ${session.token}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) return null;
+    const payload = await response.json() as { user?: { email?: string } };
+    if (payload.user?.email?.toLowerCase() !== session.email.toLowerCase()) return null;
+    return { ...session, role };
+  } catch {
+    return null;
+  }
+});
 
 export async function getCustomerSession() {
   return valid(decode<CustomerSession>((await cookies()).get(CUSTOMER_COOKIE)?.value));
@@ -86,6 +106,15 @@ export async function requireEmployee(permission?: Permission) {
   return session;
 }
 
+export async function employeeApiAccess(permission?: Permission) {
+  const session = await getEmployeeSession();
+  if (!session) return { response: NextResponse.json({ error: "Authentication required." }, { status: 401 }) } as const;
+  if (permission && !hasPermission(session.role, permission)) {
+    return { response: NextResponse.json({ error: "You do not have permission for this action." }, { status: 403 }) } as const;
+  }
+  return { session } as const;
+}
+
 export async function requireCustomer() {
   const session = await getCustomerSession();
   if (!session) redirect("/login");
@@ -95,5 +124,6 @@ export async function requireCustomer() {
 export async function clearSessions() {
   const store = await cookies();
   store.delete(EMPLOYEE_COOKIE);
+  if (LEGACY_EMPLOYEE_COOKIE !== EMPLOYEE_COOKIE) store.delete(LEGACY_EMPLOYEE_COOKIE);
   store.delete(CUSTOMER_COOKIE);
 }

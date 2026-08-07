@@ -1,15 +1,19 @@
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { requireEmployee } from "@/lib/auth/session";
+import { employeeApiAccess } from "@/lib/auth/session";
 import { adminFetch, listAdminProducts } from "@/lib/medusa/admin";
 
 export async function GET() {
-  const session = await requireEmployee("products.read");
+  const access = await employeeApiAccess("products.read");
+  if ("response" in access) return access.response;
+  const { session } = access;
   return NextResponse.json({ products: await listAdminProducts(session) });
 }
 
 export async function POST(request: Request) {
-  const session = await requireEmployee("products.write");
+  const access = await employeeApiAccess("products.write");
+  if ("response" in access) return access.response;
+  const { session } = access;
   const body = await request.json() as Record<string, unknown>;
   const thumbnail = String(body.image ?? "").trim();
   if (thumbnail && !/^(https:\/\/|\/(?!\/))/i.test(thumbnail)) {

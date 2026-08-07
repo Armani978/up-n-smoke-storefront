@@ -21,11 +21,18 @@ export function hasPermission(role: EmployeeRole, permission: Permission) {
   return permissions[role].includes(permission);
 }
 
-export function roleForEmail(email: string): EmployeeRole {
+function emailSet(value: string | undefined) {
+  return new Set((value ?? "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean));
+}
+
+export function roleForEmail(email: string): EmployeeRole | null {
   const normalized = email.toLowerCase();
-  const admins = new Set((process.env.EMPLOYEE_ADMIN_EMAILS ?? "admin@upnsmoke.local").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean));
-  const managers = new Set((process.env.EMPLOYEE_MANAGER_EMAILS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean));
+  const localAdmin = process.env.NODE_ENV === "production" ? "" : "admin@upnsmoke.local";
+  const admins = emailSet(process.env.EMPLOYEE_ADMIN_EMAILS ?? localAdmin);
+  const managers = emailSet(process.env.EMPLOYEE_MANAGER_EMAILS);
+  const staff = emailSet(process.env.EMPLOYEE_STAFF_EMAILS);
   if (admins.has(normalized)) return "admin";
   if (managers.has(normalized)) return "manager";
-  return "employee";
+  if (staff.has(normalized)) return "employee";
+  return null;
 }

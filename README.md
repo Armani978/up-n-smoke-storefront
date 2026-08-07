@@ -43,7 +43,7 @@ Do not keep seed credentials in a deployed environment.
 
 ## Environment contract
 
-Copy `.env.example` to `.env.local` for the Next.js app. The browser receives only `NEXT_PUBLIC_*` values. `AUTH_SECRET` must be at least 32 characters in production. Employee login is validated by Medusa Admin; role lists only determine authorization after that validation.
+Copy `.env.example` to `.env.local` for the Next.js app. The browser receives only `NEXT_PUBLIC_*` values. `AUTH_SECRET` must be at least 32 characters in production. Employee login requires both valid Medusa Admin credentials and membership in `EMPLOYEE_ADMIN_EMAILS`, `EMPLOYEE_MANAGER_EMAILS`, or `EMPLOYEE_STAFF_EMAILS`. Removing an email from those allowlists or disabling the Medusa user revokes portal access. In production there is no default allowed employee.
 
 The Medusa server keeps its own variables in `medusa-backend/.env`. Configure its database URL, Redis URL, CORS origins, JWT/cookie secrets, and inventory import/Clover values there. Add every production storefront origin to Medusa's `STORE_CORS` and `AUTH_CORS`.
 

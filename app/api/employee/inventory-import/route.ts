@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireEmployee } from "@/lib/auth/session";
+import { employeeApiAccess } from "@/lib/auth/session";
 import { adminFetch } from "@/lib/medusa/admin";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const session = await requireEmployee("inventory.write");
+  const access = await employeeApiAccess("inventory.write");
+  if ("response" in access) return access.response;
+  const { session } = access;
   const form = await request.formData();
   const file = form.get("file");
   if (!(file instanceof File) || !file.name.toLowerCase().endsWith(".xlsx")) return NextResponse.json({ message: "Select an XLSX workbook." }, { status: 400 });

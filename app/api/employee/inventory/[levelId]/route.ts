@@ -1,10 +1,12 @@
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { requireEmployee } from "@/lib/auth/session";
+import { employeeApiAccess } from "@/lib/auth/session";
 import { adminFetch } from "@/lib/medusa/admin";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ levelId: string }> }) {
-  const session = await requireEmployee("inventory.write");
+  const access = await employeeApiAccess("inventory.write");
+  if ("response" in access) return access.response;
+  const { session } = access;
   const { levelId } = await params;
   const { quantity } = await request.json() as { quantity: number };
   if (!Number.isInteger(quantity) || quantity < 0) return NextResponse.json({ error: "Quantity must be a whole number." }, { status: 400 });
