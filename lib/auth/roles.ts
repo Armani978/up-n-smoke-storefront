@@ -7,14 +7,18 @@ export type Permission =
   | "inventory.write"
   | "orders.read"
   | "orders.write"
+  | "pickup.read"
+  | "pickup.verify"
+  | "pickup.complete"
+  | "pickup.override"
   | "customers.read"
   | "employees.manage"
   | "settings.write";
 
 const permissions: Record<EmployeeRole, Permission[]> = {
-  admin: ["dashboard.read", "products.read", "products.write", "inventory.write", "orders.read", "orders.write", "customers.read", "employees.manage", "settings.write"],
-  manager: ["dashboard.read", "products.read", "products.write", "inventory.write", "orders.read", "orders.write", "customers.read"],
-  employee: ["dashboard.read", "products.read", "orders.read", "orders.write"],
+  admin: ["dashboard.read", "products.read", "products.write", "inventory.write", "orders.read", "orders.write", "pickup.read", "pickup.verify", "pickup.complete", "pickup.override", "customers.read", "employees.manage", "settings.write"],
+  manager: ["dashboard.read", "products.read", "products.write", "inventory.write", "orders.read", "orders.write", "pickup.read", "pickup.verify", "pickup.complete", "pickup.override", "customers.read"],
+  employee: ["dashboard.read", "products.read", "orders.read", "orders.write", "pickup.read", "pickup.verify", "pickup.complete"],
 };
 
 export function hasPermission(role: EmployeeRole, permission: Permission) {

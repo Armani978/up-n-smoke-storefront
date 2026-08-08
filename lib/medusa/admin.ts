@@ -4,16 +4,20 @@ import type { EmployeeSession } from "@/lib/types";
 import type { AdminOrder, AdminProduct, PickupStatus } from "@/lib/types";
 import { MEDUSA_BACKEND_URL } from "@/lib/medusa/config";
 
-export async function adminFetch<T>(session: EmployeeSession, path: string, init?: RequestInit): Promise<T | null> {
+export async function adminFetch<T>(session: EmployeeSession, path: string, init?: RequestInit, strict = false): Promise<T | null> {
   try {
     const response = await fetch(`${MEDUSA_BACKEND_URL}${path}`, {
       ...init,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.token}`, ...(init?.headers ?? {}) },
       cache: "no-store",
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      if (strict) throw new Error(`Medusa request failed with status ${response.status}.`);
+      return null;
+    }
     return (await response.json()) as T;
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     return null;
   }
 }
@@ -28,13 +32,13 @@ type RawProduct = {
   }>;
 };
 
-export async function listAdminProducts(session: EmployeeSession): Promise<AdminProduct[]> {
+export async function listAdminProducts(session: EmployeeSession, strict = false): Promise<AdminProduct[]> {
   const fields = "*variants,+variants.inventory_quantity,*variants.prices,*variants.inventory_items.inventory.location_levels,*categories,+thumbnail";
   const products: RawProduct[] = [];
   let offset = 0;
   let count = 1;
   while (offset < count && offset < 2000) {
-    const result = await adminFetch<{ products: RawProduct[]; count?: number }>(session, `/admin/products?limit=100&offset=${offset}&fields=${encodeURIComponent(fields)}`);
+    const result = await adminFetch<{ products: RawProduct[]; count?: number }>(session, `/admin/products?limit=100&offset=${offset}&fields=${encodeURIComponent(fields)}`, undefined, strict);
     if (!result) break;
     products.push(...result.products);
     count = result.count ?? products.length;
@@ -65,9 +69,9 @@ export async function listAdminProducts(session: EmployeeSession): Promise<Admin
   });
 }
 
-export async function listAdminOrders(session: EmployeeSession): Promise<AdminOrder[]> {
+export async function listAdminOrders(session: EmployeeSession, strict = false): Promise<AdminOrder[]> {
   const fields = "*items,*items.variant,*items.product,*customer,*shipping_address";
-  const result = await adminFetch<{ orders: Array<Record<string, unknown>> }>(session, `/admin/orders?limit=100&fields=${encodeURIComponent(fields)}`);
+  const result = await adminFetch<{ orders: Array<Record<string, unknown>> }>(session, `/admin/orders?limit=100&fields=${encodeURIComponent(fields)}`, undefined, strict);
   return (result?.orders ?? []).map((order) => {
     const customer = (order.customer ?? {}) as Record<string, unknown>;
     const shipping = (order.shipping_address ?? {}) as Record<string, unknown>;

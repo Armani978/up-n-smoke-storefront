@@ -16,6 +16,11 @@ export type StoreProduct = {
   stock: number;
   accent: string;
   signals: ProductSignal[];
+  brand?: string;
+  line?: string;
+  flavor?: string;
+  nicotine?: string;
+  puffs?: string;
 };
 
 export type CartLine = {
@@ -76,4 +81,41 @@ export type AdminOrder = {
   pickupWindow: string;
   pickupNotes: string;
   pickupStatus: PickupStatus;
+};
+
+export type PickupItem = {
+  id: string;
+  title: string;
+  variantTitle: string;
+  sku: string;
+  thumbnail: string | null;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
+export type PickupVerificationData = {
+  verificationId: string;
+  status: "active" | "processing" | "completed" | "revoked" | "expired";
+  completedAt: string | null;
+  completedBy: string | null;
+  requiresAgeVerification: boolean;
+  ageContext: { today: string; cutoff: string; timeZone: string };
+  order: {
+    id: string;
+    displayId: string;
+    status: PickupStatus;
+    customerName: string;
+    createdAt: string;
+    currency: string;
+    total: number;
+    pickupLocation: string;
+    pickupWindow: string;
+    items: PickupItem[];
+  };
+};
+
+export type PickupPassData = PickupVerificationData & {
+  token: string;
+  expiresAt: string;
 };

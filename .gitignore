@@ -11,3 +11,5 @@ outputs/
 next-env.d.ts
 *.tsbuildinfo
 .codex-runtime/
+
+certificates

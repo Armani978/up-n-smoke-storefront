@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { setCustomerSession } from "@/lib/auth/session";
+import { redirectUrl } from "@/lib/http/redirect-url";
 import { MEDUSA_BACKEND_URL } from "@/lib/medusa/config";
 
 export async function POST(request: NextRequest) {
@@ -14,8 +15,8 @@ export async function POST(request: NextRequest) {
   });
   const payload = (await response.json()) as { token?: string; message?: string };
   if (!response.ok || !payload.token) {
-    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(payload.message ?? "Invalid email or password.")}`, request.url), 303);
+    return NextResponse.redirect(redirectUrl(`/login?error=${encodeURIComponent(payload.message ?? "Invalid email or password.")}`, request), 303);
   }
   await setCustomerSession({ email, token: payload.token });
-  return NextResponse.redirect(new URL("/account", request.url), 303);
+  return NextResponse.redirect(redirectUrl("/account", request), 303);
 }

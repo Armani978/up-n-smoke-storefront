@@ -2,7 +2,7 @@ import { fallbackProducts } from "@/lib/catalog-fallback";
 import { MEDUSA_BACKEND_URL, isMedusaConfigured, storeHeaders } from "@/lib/medusa/config";
 import type { StoreProduct } from "@/lib/types";
 
-const accents = ["#f4ff35", "#ffd84a"];
+const accents = ["#dfff44", "#74e8ff", "#ffdd52"];
 
 type MedusaProduct = {
   id: string;
@@ -12,6 +12,7 @@ type MedusaProduct = {
   thumbnail?: string | null;
   images?: { url: string }[];
   categories?: { name: string }[];
+  metadata?: Record<string, unknown> | null;
   variants?: Array<{
     id: string;
     sku?: string | null;
@@ -23,6 +24,12 @@ type MedusaProduct = {
 
 export function mapMedusaProduct(product: MedusaProduct, index: number): StoreProduct {
   const variant = product.variants?.[0];
+  const metadata = product.metadata ?? {};
+  const brand = String(metadata.brand ?? product.categories?.[0]?.name ?? "UP N SMOKE");
+  const line = String(metadata.product_line ?? "Pickup selection");
+  const flavor = String(metadata.flavor ?? product.title);
+  const nicotine = String(metadata.nicotine ?? "21+");
+  const puffs = String(metadata.puffs ?? "Ready");
   const price =
     variant?.calculated_price?.calculated_amount ??
     variant?.prices?.find((item) => item.currency_code === "usd")?.amount ??
@@ -44,12 +51,17 @@ export function mapMedusaProduct(product: MedusaProduct, index: number): StorePr
     image,
     price: Number(price),
     stock,
-    accent: accents[index % accents.length],
+    accent: brand === "RAZ" ? "#74e8ff" : accents[index % accents.length],
     signals: [
-      { label: "Stock", value: stock > 0 ? String(stock) : "Out" },
+      { label: "Puffs", value: puffs },
+      { label: "Nicotine", value: nicotine },
       { label: "Pickup", value: "15 min" },
-      { label: "SKU", value: variant?.sku?.split("-")[0] ?? "UNS" },
     ],
+    brand,
+    line,
+    flavor,
+    nicotine,
+    puffs,
   };
 }
 

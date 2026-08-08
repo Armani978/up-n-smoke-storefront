@@ -9,9 +9,9 @@ export default async function MenuPage() {
   return (
     <main className="menu-page">
       <header className="page-banner">
-        <span className="eyebrow">Live Manchester inventory</span>
-        <h1>THE<br /><em>MENU.</em></h1>
-        <p>Search the wall, filter the drop, and reserve only what’s physically ready at the counter.</p>
+        <span className="eyebrow">GEEK BAR + RAZ / Manchester pickup</span>
+        <h1>FLAVOR<br /><em>WALL.</em></h1>
+        <p>Filter by brand, search device or flavor, and reserve only what the Manchester counter has ready.</p>
       </header>
       <CatalogExplorer products={products} />
     </main>

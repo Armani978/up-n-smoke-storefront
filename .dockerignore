@@ -1,0 +1,13 @@
+node_modules
+medusa-backend/node_modules
+.next
+medusa-backend/.medusa
+.git
+.env
+medusa-backend/.env
+.codex-runtime
+certificates
+output
+outputs
+*.log
+

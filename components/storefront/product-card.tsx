@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Plus } from "lucide-react";
+import { ArrowUpRight, Plus, Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -26,20 +26,19 @@ export function ProductCard({ product, featured = false }: { product: StoreProdu
 
   return (
     <article className={`signal-card ${featured ? "is-featured" : ""}`} style={{ "--signal": product.accent } as React.CSSProperties}>
-      <div className="signal-ribbon"><span>{product.name}</span></div>
+      <header className="signal-card-head">
+        <div><span>{product.brand ?? product.category}</span><strong>{product.line ?? "Pickup selection"}</strong></div>
+        <b className={available ? "is-live" : ""}><i />{available ? `${product.stock} in store` : "Out of stock"}</b>
+      </header>
       <Link href={`/product/${product.handle}`} className="signal-image">
         <Image src={product.image} alt={product.name} fill sizes={featured ? "(max-width: 800px) 100vw, 50vw" : "(max-width: 700px) 100vw, 33vw"} />
         <span className="signal-index">{product.sku}</span>
-        {product.signals.slice(0, featured ? 3 : 2).map((signal, index) => (
-          <span key={signal.label} className={`signal-bubble bubble-${index + 1}`}>
-            <small>{signal.label}</small>{signal.value}
-          </span>
-        ))}
+        <span className="signal-view"><Zap /> View flavor</span>
       </Link>
       <div className="signal-info">
         <div>
-          <span>{product.category}</span>
-          <h3>{product.name}</h3>
+          <span>{product.brand ?? product.category} / {product.line}</span>
+          <h3>{product.flavor ?? product.name}</h3>
           <p>{product.description}</p>
         </div>
         <div className="signal-buy">
@@ -49,6 +48,9 @@ export function ProductCard({ product, featured = false }: { product: StoreProdu
           </button>
         </div>
       </div>
+      <dl className="signal-specs">
+        {product.signals.map((signal) => <div key={signal.label}><dt>{signal.label}</dt><dd>{signal.value}</dd></div>)}
+      </dl>
       <Link href={`/product/${product.handle}`} className="signal-detail">Details <ArrowUpRight /></Link>
     </article>
   );

@@ -7,6 +7,9 @@ const localAdminOrigins = `${localStoreOrigins},http://localhost:9000,http://127
 const withLocalOrigins = (configured: string | undefined, local: string) =>
   Array.from(new Set(`${configured || ''},${local}`.split(',').map((origin) => origin.trim()).filter(Boolean))).join(',')
 
+const corsOrigins = (configured: string | undefined, local: string) =>
+  process.env.NODE_ENV === 'production' ? configured || '' : withLocalOrigins(configured, local)
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -15,11 +18,16 @@ module.exports = defineConfig({
     // causes authenticated Admin requests to fail while login appears to hang.
     ...(process.env.REDIS_URL ? { redisUrl: process.env.REDIS_URL } : {}),
     http: {
-      storeCors: withLocalOrigins(process.env.STORE_CORS, localStoreOrigins),
-      adminCors: withLocalOrigins(process.env.ADMIN_CORS, localAdminOrigins),
-      authCors: withLocalOrigins(process.env.AUTH_CORS, localAdminOrigins),
+      storeCors: corsOrigins(process.env.STORE_CORS, localStoreOrigins),
+      adminCors: corsOrigins(process.env.ADMIN_CORS, localAdminOrigins),
+      authCors: corsOrigins(process.env.AUTH_CORS, localAdminOrigins),
       jwtSecret: process.env.JWT_SECRET || 'change-me',
       cookieSecret: process.env.COOKIE_SECRET || 'change-me',
     },
   },
+  modules: [
+    {
+      resolve: "./src/modules/pickup-verification",
+    },
+  ],
 })

@@ -8,12 +8,14 @@ import { useCart } from "@/components/storefront/cart-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatMoney } from "@/lib/utils";
+import { PickupPass } from "@/components/pickup/pickup-pass";
+import type { PickupPassData } from "@/lib/types";
 
 const windows = ["ASAP · 15–20 minutes", "Today · 4:30 PM", "Today · 6:00 PM"];
 
 export default function CheckoutPage() {
   const { lines, subtotal, completePickup, busy } = useCart();
-  const [complete, setComplete] = useState<{ displayId: string; pickupWindow: string } | null>(null);
+  const [complete, setComplete] = useState<{ displayId: string; pickupWindow: string; pass: PickupPassData | null; passError?: string } | null>(null);
   const [error, setError] = useState("");
   const router = useRouter();
   const total = subtotal;
@@ -28,14 +30,17 @@ export default function CheckoutPage() {
     const data = new FormData(event.currentTarget);
     try {
       const pickupWindow = String(data.get("pickupWindow"));
+      const email = String(data.get("email"));
       const result = await completePickup({
         name: String(data.get("name")),
-        email: String(data.get("email")),
+        email,
         phone: String(data.get("phone")),
         pickupWindow,
         notes: String(data.get("notes") ?? ""),
       });
-      setComplete({ displayId: result.displayId, pickupWindow });
+      const passResponse = await fetch("/api/pickup-pass", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: result.id, email }) });
+      const pass = await passResponse.json();
+      setComplete({ displayId: result.displayId, pickupWindow, pass: passResponse.ok ? pass : null, passError: passResponse.ok ? undefined : pass.error });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to place the pickup order.");
     }
@@ -46,7 +51,7 @@ export default function CheckoutPage() {
   }
 
   if (complete) {
-    return <main className="checkout-complete"><CheckCircle2 /><span>ORDER #{complete.displayId}</span><h1>LOCKED<br /><em>IN.</em></h1><p>Your pickup is in the queue for <b>{complete.pickupWindow}</b>. Pay through Clover when you arrive.</p><Button asChild><Link href="/menu">Back to the menu</Link></Button></main>;
+    return <main className="checkout-complete-shell"><section className="checkout-complete"><CheckCircle2 /><span>ORDER #{complete.displayId}</span><h1>LOCKED<br /><em>IN.</em></h1><p>Your pickup is in the queue for <b>{complete.pickupWindow}</b>. Pay through Clover when you arrive.</p><Button asChild><Link href="/menu">Back to the menu</Link></Button></section>{complete.pass ? <PickupPass pass={complete.pass} /> : <p className="pass-error">Your order was placed, but the pickup pass could not load. {complete.passError || "Open your order history to try again."}</p>}</main>;
   }
 
   return (

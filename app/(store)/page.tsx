@@ -11,18 +11,17 @@ export default async function HomePage() {
     <main>
       <section className="home-hero">
         <div className="hero-grid" aria-hidden="true" />
-        <div className="hero-kicker"><span>01</span> Manchester’s pickup counter</div>
-        <h1><span>PICK</span><br /><em>YOUR</em><br /><span>POISON.</span></h1>
-        <p className="hero-copy">Live shelf inventory. No shipping maze. Reserve your lineup and collect it at the counter while it’s still hot.</p>
-        <Link href="/menu" className="hero-cta">Shop what’s live <ArrowUpRight /></Link>
+        <div className="hero-kicker"><span>01</span> Manchester’s 21+ pickup counter</div>
+        <h1><span>FLAVOR.</span><br /><em>LOCKED.</em><br /><span>LOCAL.</span></h1>
+        <Link href="/menu" className="hero-cta">Browse the live wall <ArrowUpRight /></Link>
         <div className="hero-orbit orbit-one">15<small>min</small></div>
         <div className="hero-orbit orbit-two">ID<small>ready</small></div>
-        <div className="hero-stamp"><ScanLine /><span>LOCAL STOCK<br />UPDATED LIVE</span></div>
-        <a href="#featured" className="hero-scroll"><ArrowDownRight /> Scroll for the drop</a>
+        <div className="hero-stamp"><ScanLine /><span>GEEK BAR + RAZ<br />LOCAL PICKUP</span></div>
+        <a href="#featured" className="hero-scroll"><ArrowDownRight /> See featured flavors</a>
       </section>
 
       <section className="ticker" aria-label="Store benefits">
-        <div>LIVE INVENTORY ✦ PICKUP ONLY ✦ PAY AT THE COUNTER ✦ MANCHESTER NH ✦ LIVE INVENTORY ✦ PICKUP ONLY ✦ PAY AT THE COUNTER ✦</div>
+        <div>GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦ PICKUP ONLY ✦ 21+ ID REQUIRED ✦ MANCHESTER NH ✦ GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦</div>
       </section>
 
       <section className="proof-strip">
@@ -33,8 +32,8 @@ export default async function HomePage() {
 
       <section id="featured" className="featured-drop">
         <div className="section-heading">
-          <div><span className="eyebrow">Fresh on the shelf / 01—04</span><h2>THE CURRENT<br /><em>SIGNAL.</em></h2></div>
-          <p>Product-first cards inspired by in-store flavor boards: quick specs, loud color, and nothing hidden.</p>
+          <div><span className="eyebrow">Featured devices / verified product imagery</span><h2>GEEK BAR.<br /><em>MEET RAZ.</em></h2></div>
+          <p>Shop by the exact device and flavor—puff rating, nicotine level, price, and local quantity are visible before you reserve.</p>
         </div>
         <div className="featured-grid">
           {featured.map((product, index) => <ProductCard key={product.id} product={product} featured={index === 0} />)}

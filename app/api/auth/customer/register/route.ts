@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { setCustomerSession } from "@/lib/auth/session";
+import { redirectUrl } from "@/lib/http/redirect-url";
 import { MEDUSA_BACKEND_URL, storeHeaders } from "@/lib/medusa/config";
 
 export async function POST(request: NextRequest) {
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
   });
   const auth = (await authResponse.json()) as { token?: string; message?: string };
   if (!authResponse.ok || !auth.token) {
-    return NextResponse.redirect(new URL(`/login?mode=register&error=${encodeURIComponent(auth.message ?? "Unable to create account.")}`, request.url), 303);
+    return NextResponse.redirect(redirectUrl(`/login?mode=register&error=${encodeURIComponent(auth.message ?? "Unable to create account.")}`, request), 303);
   }
   const customerResponse = await fetch(`${MEDUSA_BACKEND_URL}/store/customers`, {
     method: "POST",
@@ -26,8 +27,8 @@ export async function POST(request: NextRequest) {
   });
   if (!customerResponse.ok) {
     const failure = (await customerResponse.json()) as { message?: string };
-    return NextResponse.redirect(new URL(`/login?mode=register&error=${encodeURIComponent(failure.message ?? "Unable to create customer profile.")}`, request.url), 303);
+    return NextResponse.redirect(redirectUrl(`/login?mode=register&error=${encodeURIComponent(failure.message ?? "Unable to create customer profile.")}`, request), 303);
   }
   await setCustomerSession({ email, token: auth.token });
-  return NextResponse.redirect(new URL("/account", request.url), 303);
+  return NextResponse.redirect(redirectUrl("/account", request), 303);
 }

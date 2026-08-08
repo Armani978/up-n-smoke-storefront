@@ -3,7 +3,9 @@ import { employeeApiAccess } from "@/lib/auth/session";
 import { adminFetch } from "@/lib/medusa/admin";
 import type { PickupStatus } from "@/lib/types";
 
-const allowed: PickupStatus[] = ["pending", "accepted", "preparing", "ready", "arrived", "completed", "cancelled"];
+// Completion is deliberately excluded: pickup handoff must go through the
+// server-authoritative ID checklist and fulfillment workflow.
+const allowed: PickupStatus[] = ["pending", "accepted", "preparing", "ready", "arrived", "cancelled"];
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const access = await employeeApiAccess("orders.write");

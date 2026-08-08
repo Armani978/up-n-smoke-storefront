@@ -7,5 +7,9 @@ export default defineMiddlewares({
       method: "POST",
       middlewares: [authenticate("user", ["session", "bearer"])],
     },
+    {
+      matcher: "/admin/pickup-verifications*",
+      middlewares: [authenticate("user", ["session", "bearer"])],
+    },
   ],
 })
