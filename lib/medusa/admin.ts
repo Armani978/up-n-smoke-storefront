@@ -28,7 +28,7 @@ type RawProduct = {
   variants?: Array<{
     id: string; sku?: string; inventory_quantity?: number;
     prices?: Array<{ amount: number; currency_code: string }>;
-    inventory_items?: Array<{ inventory_item_id?: string; inventory?: { id: string; location_levels?: Array<{ id: string; stocked_quantity: number }> } }>;
+    inventory_items?: Array<{ inventory_item_id?: string; inventory?: { id: string; location_levels?: Array<{ id: string; location_id: string; stocked_quantity: number }> } }>;
   }>;
 };
 
@@ -65,6 +65,7 @@ export async function listAdminProducts(session: EmployeeSession, strict = false
       status: product.status ?? "published",
       inventoryItemId: inventory?.id ?? variant?.inventory_items?.[0]?.inventory_item_id,
       inventoryLevelId: level?.id,
+      inventoryLocationId: level?.location_id,
     };
   });
 }

@@ -104,14 +104,18 @@ export function InventoryManager({
   }
   async function saveStock(product: AdminProduct) {
     const quantity = Number(stockDraft[product.id]);
-    if (!product.inventoryLevelId || !Number.isInteger(quantity)) {
+    if (
+      !product.inventoryItemId ||
+      !product.inventoryLocationId ||
+      !Number.isInteger(quantity)
+    ) {
       setMessage(
-        "This product needs a Medusa inventory level before stock can change.",
+        "This product needs a Medusa inventory item and stock location before stock can change.",
       );
       return;
     }
     const response = await fetch(
-      `/api/employee/inventory/${product.inventoryLevelId}`,
+      `/api/employee/inventory/${encodeURIComponent(product.inventoryItemId)}/${encodeURIComponent(product.inventoryLocationId)}`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -124,6 +128,11 @@ export function InventoryManager({
           item.id === product.id ? { ...item, stock: quantity } : item,
         ),
       );
+      setStockDraft((drafts) => {
+        const next = { ...drafts };
+        delete next[product.id];
+        return next;
+      });
       setMessage(`${product.name} stock updated.`);
     } else
       setMessage((await response.json()).error ?? "Unable to update stock.");

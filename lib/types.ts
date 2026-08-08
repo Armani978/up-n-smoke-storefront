@@ -55,6 +55,7 @@ export type AdminProduct = StoreProduct & {
   status: string;
   inventoryItemId?: string;
   inventoryLevelId?: string;
+  inventoryLocationId?: string;
 };
 
 export type AdminOrderLine = {
