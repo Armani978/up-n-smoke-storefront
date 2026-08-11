@@ -87,30 +87,33 @@ export function StoreHeader() {
 
   return (
     <>
-      <header className="store-header">
-        <button
-          ref={menuButton}
-          className="header-icon"
-          onClick={() => setOpen(true)}
-          aria-label="Open navigation"
-          aria-expanded={open}
-          aria-controls="store-navigation"
-        >
-          <Menu aria-hidden="true" />
-          <span>Menu</span>
-        </button>
-        <Link href="/" className="brand-mark" aria-label="UP N SMOKE home">
-          <Image src={logo} alt="UP N SMOKE" priority sizes="140px" />
-        </Link>
-        <div className="header-meta">
-          <span className="pickup-promise"><i /> Manchester · pickup in 15–20</span>
-          <Link href="/cart" className="header-cart" aria-label={`Cart with ${count} items`}>
-            <ShoppingBag aria-hidden="true" />
-            <span>Bag</span>
-            <b>{count}</b>
+      <div className="store-header-shell">
+        <header className="store-header">
+          <Link href="/" className="brand-mark" aria-label="UP N SMOKE home">
+            <Image src={logo} alt="UP N SMOKE" priority sizes="96px" />
           </Link>
-        </div>
-      </header>
+          <div className="header-meta">
+            <nav className="header-shortcuts" aria-label="Store shortcuts">
+              <Link href="/menu" aria-current={pathname === "/menu" ? "page" : undefined}>Shop</Link>
+              <Link href="/account" aria-current={pathname.startsWith("/account") ? "page" : undefined}>Account</Link>
+            </nav>
+            <button
+              ref={menuButton}
+              className="header-icon"
+              onClick={() => setOpen(true)}
+              aria-label="Open navigation"
+              aria-expanded={open}
+              aria-controls="store-navigation"
+            >
+              <Menu aria-hidden="true" />
+            </button>
+            <Link href="/cart" className="header-cart" aria-label={`Cart with ${count} items`}>
+              <ShoppingBag aria-hidden="true" />
+              <b>{count}</b>
+            </Link>
+          </div>
+        </header>
+      </div>
 
       <button
         className={`menu-scrim ${open ? "is-open" : ""}`}
