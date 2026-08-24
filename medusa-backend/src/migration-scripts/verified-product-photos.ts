@@ -10,6 +10,9 @@ type VerifiedPhoto = {
   sourceUrl: string
 }
 
+const LOGO_FALLBACK = "/up-n-smoke-logo.png"
+const PLACEHOLDER_FRAGMENTS = ["product-placeholder", "placehold.co", "1609592806596"]
+
 const verifiedPhotos: readonly VerifiedPhoto[] = [
   {
     sku: "784762990235",
@@ -48,37 +51,53 @@ export default async function applyVerifiedProductPhotos({container}: {container
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const {data: variants} = await query.graph({
     entity: "product_variant",
-    fields: ["sku", "product.id", "product.title", "product.metadata"],
+    fields: ["sku", "product.id", "product.title", "product.thumbnail", "product.metadata"],
   })
-  const bySku = new Map(variants.map((variant: any) => [String(variant.sku ?? "").toLowerCase(), variant]))
-  const byExactTitle = new Map(variants.map((variant: any) => [String(variant.product?.title ?? "").trim().toLowerCase(), variant]))
-
-  const updates = verifiedPhotos.flatMap((photo) => {
-    const variant: any = photo.sku
-      ? bySku.get(photo.sku.toLowerCase())
-      : byExactTitle.get(String(photo.exactTitle).trim().toLowerCase())
-    const identity = photo.sku ?? `title "${photo.exactTitle}"`
-    if (!variant?.product?.id) {
-      logger.warn(`Verified product photo skipped; ${identity} was not found.`)
-      return []
-    }
-    return [{
-      id: variant.product.id,
-      thumbnail: photo.thumbnail,
-      metadata: {
-        ...(variant.product.metadata ?? {}),
-        photo_verified: true,
-        photo_verified_upc: photo.sku ?? null,
-        photo_verified_title: photo.exactTitle ?? variant.product.title,
-        photo_sku: photo.sku,
-        photo_source: photo.source,
-        photo_source_url: photo.sourceUrl,
-      },
-    }]
-  })
-
-  if (updates.length) {
-    await updateProductsWorkflow(container).run({input: {products: updates}})
+  const photoBySku = new Map(verifiedPhotos.flatMap((photo) => photo.sku ? [[photo.sku.toLowerCase(), photo] as const] : []))
+  const photoByTitle = new Map(verifiedPhotos.flatMap((photo) => photo.exactTitle ? [[photo.exactTitle.trim().toLowerCase(), photo] as const] : []))
+  const products = new Map<string, any>()
+  for (const variant of variants as any[]) {
+    if (variant.product?.id && !products.has(variant.product.id)) products.set(variant.product.id, variant)
   }
-  logger.info(`Applied ${updates.length} verified product photos.`)
+
+  let verifiedCount = 0
+  let existingCount = 0
+  let fallbackCount = 0
+  const updates = Array.from(products.values()).flatMap((variant: any) => {
+    const product = variant.product
+    const sku = String(variant.sku ?? "").trim()
+    const photo = photoBySku.get(sku.toLowerCase()) ?? photoByTitle.get(String(product.title ?? "").trim().toLowerCase())
+    const currentThumbnail = String(product.thumbnail ?? "").trim()
+    const currentIsUsable = Boolean(currentThumbnail) && !PLACEHOLDER_FRAGMENTS.some((fragment) => currentThumbnail.includes(fragment)) && currentThumbnail !== LOGO_FALLBACK
+    const thumbnail = photo?.thumbnail ?? (currentIsUsable ? currentThumbnail : LOGO_FALLBACK)
+
+    if (photo) verifiedCount += 1
+    else if (currentIsUsable) existingCount += 1
+    else fallbackCount += 1
+
+    const metadata = photo ? {
+      ...(product.metadata ?? {}),
+      photo_verified: true,
+      photo_verified_upc: photo.sku ?? null,
+      photo_verified_title: photo.exactTitle ?? product.title,
+      photo_sku: photo.sku,
+      photo_source: photo.source,
+      photo_source_url: photo.sourceUrl,
+    } : thumbnail === LOGO_FALLBACK ? {
+      ...(product.metadata ?? {}),
+      photo_verified: false,
+      photo_source: "up_n_smoke_logo_fallback",
+    } : product.metadata
+
+    if (currentThumbnail === thumbnail && (!photo || product.metadata?.photo_verified === true)) return []
+    return [{ id: product.id, thumbnail, metadata }]
+  })
+
+  const dryRun = ["1", "true", "yes"].includes(String(process.env.PHOTO_DRY_RUN ?? "").toLowerCase())
+  if (!dryRun) {
+    for (let index = 0; index < updates.length; index += 100) {
+      await updateProductsWorkflow(container).run({input: {products: updates.slice(index, index + 100)}})
+    }
+  }
+  logger.info(`${dryRun ? "Audited" : "Applied"} product photos: ${products.size} total, ${verifiedCount} verified matches, ${existingCount} existing photos, ${fallbackCount} logo fallbacks, ${updates.length} updates${dryRun ? " pending" : ""}.`)
 }

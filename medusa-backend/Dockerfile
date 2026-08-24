@@ -29,6 +29,9 @@ RUN --mount=type=cache,target=/root/.npm npm install --global npm@11.12.1 \
 
 COPY --from=builder /server/.medusa/server ./
 
+COPY docker-entrypoint.sh /usr/local/bin/upnsmoke-medusa-entrypoint
+RUN chmod +x /usr/local/bin/upnsmoke-medusa-entrypoint
+
 EXPOSE 9000
 
-CMD ["npm", "run", "start"]
+ENTRYPOINT ["/usr/local/bin/upnsmoke-medusa-entrypoint"]

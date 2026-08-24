@@ -15,7 +15,7 @@ export function pickupService(req: MedusaRequest) {
 }
 
 export function graph(req: MedusaRequest) {
-  return req.scope.resolve(ContainerRegistrationKeys.QUERY) as {
+  return req.scope.resolve(ContainerRegistrationKeys.QUERY) as unknown as {
     graph: (input: Record<string, unknown>) => Promise<{ data: any[] }>
   }
 }
@@ -28,11 +28,28 @@ export async function orderById(req: MedusaRequest, id: string) {
       "customer.id", "customer.first_name", "customer.last_name", "shipping_address.first_name",
       "shipping_address.last_name", "items.id", "items.title", "items.product_title", "items.variant_title",
       "items.variant_sku", "items.quantity", "items.unit_price", "items.total", "items.thumbnail",
-      "items.product.metadata", "fulfillments.id", "fulfillments.canceled_at",
+      "items.product.metadata", "items.detail.id", "items.detail.quantity", "items.detail.fulfilled_quantity",
+      "fulfillments.id", "fulfillments.canceled_at",
     ],
     filters: { id },
   })
   return data[0] || null
+}
+
+export function fulfillmentItemsForOrder(order: any) {
+  return (order.items || []).flatMap((item: any) => {
+    const id = item.id
+    const remaining = Number(item.detail?.quantity ?? item.quantity ?? 0) - Number(item.detail?.fulfilled_quantity ?? 0)
+    return id && remaining > 0 ? [{ id, quantity: remaining }] : []
+  })
+}
+
+export function canAttemptPickupCompletion(status: unknown) {
+  // The route is protected by a per-verification lock. If it observes
+  // `processing` after acquiring that lock, the previous request ended before
+  // it could finish or restore the verification. Retrying is safe because the
+  // completion route also detects an already-created fulfillment.
+  return status === "active" || status === "processing"
 }
 
 export async function orderByDisplayId(req: MedusaRequest, displayId: string) {

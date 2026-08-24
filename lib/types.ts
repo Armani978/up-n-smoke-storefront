@@ -53,6 +53,7 @@ export type EmployeeSession = {
 
 export type AdminProduct = StoreProduct & {
   status: string;
+  onStorefront: boolean;
   inventoryItemId?: string;
   inventoryLevelId?: string;
   inventoryLocationId?: string;

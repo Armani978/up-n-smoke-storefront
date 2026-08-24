@@ -1,9 +1,9 @@
 import { ArrowLeft, Check, MapPin } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductBuyPanel } from "@/components/storefront/product-buy-panel";
+import { ProductImage } from "@/components/storefront/product-image";
 import { getProduct } from "@/lib/medusa/catalog";
 import { formatMoney } from "@/lib/utils";
 
@@ -26,7 +26,7 @@ export default async function ProductPage({ params }: Props) {
       <div className="product-stage">
         <div className="product-art">
           <div className="product-ribbon">{product.name}</div>
-          <Image src={product.image} alt={product.name} fill priority sizes="(max-width: 900px) 100vw, 55vw" />
+          <ProductImage src={product.image} alt={product.name} fill priority sizes="(max-width: 900px) 100vw, 55vw" />
           {product.signals.map((signal, index) => <span className={`detail-bubble detail-${index + 1}`} key={signal.label}><small>{signal.label}</small>{signal.value}</span>)}
         </div>
         <div className="product-copy">

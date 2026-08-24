@@ -28,6 +28,7 @@ type ParsedRow = {
   productCode: string
   image: string
   hidden: boolean
+  visibilitySpecified: boolean
 }
 
 const SKU_HEADERS = ["sku", "item sku", "variant sku"]
@@ -38,7 +39,8 @@ const PRICE_HEADERS = ["price", "retail price", "sell price"]
 const CATEGORY_HEADERS = ["categories", "category", "category name", "department"]
 const DESCRIPTION_HEADERS = ["description", "desc"]
 const IMAGE_HEADERS = ["image", "image url", "image_url", "photo", "photo url", "thumbnail"]
-const HIDDEN_HEADERS = ["hidden?", "hidden", "show in register app"]
+const HIDDEN_HEADERS = ["hidden?", "hidden"]
+const STOREFRONT_HEADERS = ["storefront?", "show on storefront", "show in storefront", "published?", "show in register app"]
 
 const normalize = (value: unknown) => String(value ?? "").trim()
 const firstColumn = (headers: Map<string, number>, aliases: string[]) => aliases.map((key) => headers.get(key)).find(Boolean)
@@ -94,6 +96,7 @@ function rowsFromSheet(cellsByRow: Map<number, Map<number, unknown>>) {
   const descriptionColumn = firstColumn(headers, DESCRIPTION_HEADERS)
   const imageColumn = firstColumn(headers, IMAGE_HEADERS)
   const hiddenColumn = firstColumn(headers, HIDDEN_HEADERS)
+  const storefrontColumn = firstColumn(headers, STOREFRONT_HEADERS)
   if (!skuColumn || !quantityColumn) return []
 
   const rows: ParsedRow[] = []
@@ -110,6 +113,8 @@ function rowsFromSheet(cellsByRow: Map<number, Map<number, unknown>>) {
       throw new Error(`Row ${rowNumber}: Quantity must be a whole number of zero or more.`)
     }
     const hiddenValue = hiddenColumn ? normalize(row.get(hiddenColumn)).toLowerCase() : "no"
+    const storefrontValue = storefrontColumn ? normalize(row.get(storefrontColumn)).toLowerCase() : "yes"
+    const isYes = (value: string) => ["yes", "true", "1", "y"].includes(value)
     rows.push({
       row: rowNumber,
       sku,
@@ -120,7 +125,8 @@ function rowsFromSheet(cellsByRow: Map<number, Map<number, unknown>>) {
       description: descriptionColumn ? normalize(row.get(descriptionColumn)) : "",
       productCode,
       image: imageColumn ? normalize(row.get(imageColumn)) : "",
-      hidden: hiddenValue === "yes" || hiddenValue === "true" || hiddenValue === "1" || hiddenValue === "no" && headers.has("show in register app"),
+      hidden: storefrontColumn ? !isYes(storefrontValue) : isYes(hiddenValue),
+      visibilitySpecified: Boolean(storefrontColumn || hiddenColumn),
     })
   }
   return rows
@@ -177,7 +183,7 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
     })
     const {data: productVariants} = await query.graph({
       entity: "product_variant",
-      fields: ["id", "sku", "product.id", "product.title", "product.thumbnail", "product.metadata"],
+      fields: ["id", "sku", "product.id", "product.title", "product.thumbnail", "product.status", "product.metadata", "product.sales_channels.id"],
     })
     const bySku = new Map(inventoryItems.map((item: any) => [normalize(item.sku).toLowerCase(), item]))
     const variantBySku = new Map(productVariants.map((variant: any) => [normalize(variant.sku).toLowerCase(), variant]))
@@ -196,9 +202,14 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
     }
 
     if (!req.body.dry_run) {
-      const {data: locations} = await query.graph({entity: "stock_location", fields: ["id", "name"]})
+      const [{data: locations}, {data: salesChannels}] = await Promise.all([
+        query.graph({entity: "stock_location", fields: ["id", "name"]}),
+        query.graph({entity: "sales_channel", fields: ["id", "name"]}),
+      ])
       const location = locations.find((item: any) => /manchester/i.test(item.name)) ?? locations[0]
       if (!location) throw new Error("Medusa has no stock location configured.")
+      const salesChannel = salesChannels.find((item: any) => /up n smoke|online pickup/i.test(item.name)) ?? salesChannels[0]
+      if (!salesChannel) throw new Error("Medusa has no storefront sales channel configured.")
 
       if (toRepair.length) {
         const link = req.scope.resolve(ContainerRegistrationKeys.LINK)
@@ -230,14 +241,34 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
         await updateProductsWorkflow(req.scope).run({input: {products: batch}})
       }
 
+      const storefrontUpdates = new Map<string, any>()
+      for (const row of rows) {
+        const variant: any = variantBySku.get(row.sku.toLowerCase())
+        const product = variant?.product
+        if (!product?.id) continue
+        const status = row.visibilitySpecified
+          ? (row.hidden ? ProductStatus.DRAFT : ProductStatus.PUBLISHED)
+          : product.status
+        const channelIds = (product.sales_channels ?? []).map((channel: any) => channel.id)
+        const needsChannel = status === ProductStatus.PUBLISHED && !channelIds.includes(salesChannel.id)
+        if (product.status !== status || needsChannel) {
+          storefrontUpdates.set(product.id, {
+            id: product.id,
+            status,
+            ...(status === ProductStatus.PUBLISHED ? {sales_channels: [...new Set([...channelIds, salesChannel.id])].map((id) => ({id}))} : {}),
+          })
+        }
+      }
+      for (const batch of chunks([...storefrontUpdates.values()], 100)) {
+        await updateProductsWorkflow(req.scope).run({input: {products: batch}})
+      }
+
       if (toCreate.length) {
-        const [{data: profiles}, {data: salesChannels}, {data: existingCategories}] = await Promise.all([
+        const [{data: profiles}, {data: existingCategories}] = await Promise.all([
           query.graph({entity: "shipping_profile", fields: ["id", "name", "type"]}),
-          query.graph({entity: "sales_channel", fields: ["id", "name"]}),
           query.graph({entity: "product_category", fields: ["id", "name"]}),
         ])
         const profile = profiles.find((item: any) => item.type === "default") ?? profiles[0]
-        const salesChannel = salesChannels.find((item: any) => /up n smoke|online pickup/i.test(item.name)) ?? salesChannels[0]
         if (!profile || !salesChannel) throw new Error("Medusa shipping profile or sales channel is not configured.")
 
         const categoryByName = new Map(existingCategories.map((item: any) => [normalize(item.name).toLowerCase(), item]))
@@ -309,10 +340,12 @@ export async function POST(req: MedusaRequest<ImportBody>, res: MedusaResponse) 
       matched_count: matched.length,
       created_count: toCreate.length,
       repaired_count: toRepair.length,
+      storefront_count: rows.filter((row) => row.visibilitySpecified && !row.hidden).length,
+      hidden_count: rows.filter((row) => row.visibilitySpecified && row.hidden).length,
       photo_updated_count: rows.filter((row) => row.image && variantBySku.has(row.sku.toLowerCase())).length,
       level_count: needsLevel.length,
       missing_count: 0,
-      matched: matched.slice(0, 100).map(({inventory_item_id, level_id, location_id, description, category, price, productCode, image, hidden, ...item}) => item),
+      matched: matched.slice(0, 100).map(({inventory_item_id, level_id, location_id, description, category, price, productCode, image, hidden, visibilitySpecified, ...item}) => item),
       created: toCreate.slice(0, 100).map(({row, sku, name, quantity, price, category}) => ({row, sku, name, quantity, price, category})),
       repaired: toRepair.slice(0, 100).map(({row, sku, name, quantity}) => ({row, sku, name, quantity})),
       missing: [],

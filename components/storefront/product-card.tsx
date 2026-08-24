@@ -1,10 +1,10 @@
 "use client";
 
 import { ArrowUpRight, Plus, Zap } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/components/storefront/cart-provider";
+import { ProductImage } from "@/components/storefront/product-image";
 import type { StoreProduct } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 
@@ -31,7 +31,7 @@ export function ProductCard({ product, featured = false }: { product: StoreProdu
         <b className={available ? "is-live" : ""}><i />{available ? `${product.stock} in store` : "Out of stock"}</b>
       </header>
       <Link href={`/product/${product.handle}`} className="signal-image">
-        <Image src={product.image} alt={product.name} fill sizes={featured ? "(max-width: 800px) 100vw, 50vw" : "(max-width: 700px) 100vw, 33vw"} />
+        <ProductImage src={product.image} alt={product.name} fill sizes={featured ? "(max-width: 800px) 100vw, 50vw" : "(max-width: 700px) 100vw, 33vw"} />
         <span className="signal-index">{product.sku}</span>
         <span className="signal-view"><Zap /> View flavor</span>
       </Link>

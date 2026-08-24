@@ -1,5 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { createPickupToken, hashPickupToken } from "../../../../modules/pickup-verification/token"
+import { createPickupCode, hashPickupToken } from "../../../../modules/pickup-verification/token"
 import { orderById, pickupService, publicOrder, requiresAgeVerification } from "../../../pickup-verification-helpers"
 
 type Body = { order_id?: string; email?: string }
@@ -23,7 +23,7 @@ export async function POST(req: MedusaRequest<Body>, res: MedusaResponse) {
     return void res.status(409).json({ message: "This pickup was canceled." })
   }
 
-  const token = createPickupToken()
+  const token = createPickupCode()
   const expiresAt = new Date(Date.now() + Number(process.env.PICKUP_QR_TTL_DAYS || 30) * 86_400_000)
   const verification = existing
     ? await service.updatePickupVerifications({

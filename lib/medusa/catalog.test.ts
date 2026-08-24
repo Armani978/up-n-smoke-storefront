@@ -29,6 +29,17 @@ describe("Medusa catalog mapping", () => {
     }, 1);
 
     expect(product.stock).toBe(0);
-    expect(product.image).toBe("/product-placeholder.svg");
+    expect(product.image).toBe("/up-n-smoke-logo.png");
+  });
+
+  it("uses an exact local product photo when the SKU has a verified match", () => {
+    const product = mapMedusaProduct({
+      id: "prod_3",
+      title: "Verified accessory",
+      handle: "verified-accessory",
+      variants: [{ id: "variant_3", sku: "784762991300" }],
+    }, 2);
+
+    expect(product.image).toBe("/product-images/784762991300.jpg");
   });
 });

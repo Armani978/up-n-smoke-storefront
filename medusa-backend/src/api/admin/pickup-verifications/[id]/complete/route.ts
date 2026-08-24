@@ -3,7 +3,7 @@ import type { ILockingModule, IOrderModuleService } from "@medusajs/framework/ty
 import { Modules } from "@medusajs/framework/utils"
 import { createOrderFulfillmentWorkflow } from "@medusajs/medusa/core-flows"
 import { createPickupToken, hashPickupToken } from "../../../../../modules/pickup-verification/token"
-import { audit, orderById, pickupService, pickupStatus, publicOrder } from "../../../../pickup-verification-helpers"
+import { audit, canAttemptPickupCompletion, fulfillmentItemsForOrder, orderById, pickupService, pickupStatus, publicOrder } from "../../../../pickup-verification-helpers"
 
 type Body = {
   checklist?: {
@@ -12,6 +12,16 @@ type Body = {
     id_valid_not_expired?: boolean
     age_confirmed?: boolean
   }
+}
+
+function errorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>
+    if (typeof record.message === "string") return record.message
+    try { return JSON.stringify(error) } catch { return String(error) }
+  }
+  return String(error)
 }
 
 export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaResponse) {
@@ -24,7 +34,7 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
       const order = await orderById(req, verification.order_id)
       if (!order) throw Object.assign(new Error("Pickup order not found."), { status: 404 })
       if (verification.status === "completed") return { alreadyCompleted: true, ...publicOrder(order, verification) }
-      if (verification.status !== "active") throw Object.assign(new Error("Pickup verification is no longer active."), { status: 409 })
+      if (!canAttemptPickupCompletion(verification.status)) throw Object.assign(new Error("Pickup verification is no longer active."), { status: 409 })
       if (["cancelled", "canceled"].includes(String(order.status)) || pickupStatus(order) === "cancelled") {
         throw Object.assign(new Error("Canceled orders cannot be completed."), { status: 409 })
       }
@@ -41,14 +51,17 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
         throw Object.assign(new Error("A passing server-side age verification is required."), { status: 409 })
       }
 
-      await service.updatePickupVerifications({ id: verification.id, status: "processing" })
       try {
         const activeFulfillments = (order.fulfillments || []).filter((fulfillment: any) => !fulfillment.canceled_at)
         if (!activeFulfillments.length) {
+          const fulfillmentItems = fulfillmentItemsForOrder(order)
+          if (!fulfillmentItems.length) {
+            throw Object.assign(new Error("This order has no unfulfilled items."), { status: 409 })
+          }
           await createOrderFulfillmentWorkflow(req.scope).run({
             input: {
               order_id: order.id,
-              items: (order.items || []).map((item: any) => ({ id: item.id, quantity: Number(item.quantity) })),
+              items: fulfillmentItems,
               no_notification: false,
             },
           })
@@ -78,13 +91,26 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
         })
         return publicOrder({ ...order, metadata: { ...(order.metadata || {}), pickup_status: "completed" } }, completed)
       } catch (error) {
-        await service.updatePickupVerifications({ id: verification.id, status: "active" })
+        if (verification.status === "processing") {
+          await service.updatePickupVerifications({ id: verification.id, status: "active" })
+        }
+        console.error("[pickup-complete] fulfillment failed", {
+          verificationId: verification.id,
+          orderId: order.id,
+          error: errorMessage(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        })
         throw error
       }
     }, { timeout: 10 })
     res.json(result)
   } catch (error) {
+    console.error("[pickup-complete] request failed", {
+      verificationId: req.params.id,
+      error: errorMessage(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     const status = Number((error as { status?: number }).status || 500)
-    res.status(status).json({ message: error instanceof Error ? error.message : "Unable to complete pickup." })
+    res.status(status).json({ message: errorMessage(error) || "Unable to complete pickup." })
   }
 }

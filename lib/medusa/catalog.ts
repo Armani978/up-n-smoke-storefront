@@ -1,5 +1,6 @@
 import { fallbackProducts } from "@/lib/catalog-fallback";
 import { MEDUSA_BACKEND_URL, isMedusaConfigured, storeHeaders } from "@/lib/medusa/config";
+import { resolveProductImage } from "@/lib/product-images";
 import type { StoreProduct } from "@/lib/types";
 
 const accents = ["#dfff44", "#74e8ff", "#ffdd52"];
@@ -36,16 +37,15 @@ export function mapMedusaProduct(product: MedusaProduct, index: number): StorePr
     0;
   const stock = Math.max(0, Number(variant?.inventory_quantity ?? 0));
   const sourceImage = product.thumbnail ?? product.images?.[0]?.url;
-  const image = !sourceImage || sourceImage.includes("1609592806596")
-    ? "/product-placeholder.svg"
-    : sourceImage;
+  const sku = variant?.sku ?? product.handle;
+  const image = resolveProductImage(sourceImage, sku);
 
   return {
     id: product.id,
     variantId: variant?.id ?? "",
     name: product.title,
     handle: product.handle,
-    sku: variant?.sku ?? product.handle,
+    sku,
     category: product.categories?.[0]?.name ?? "Other",
     description: product.description ?? "Available for fast in-store pickup.",
     image,
@@ -99,7 +99,7 @@ export async function getCatalog(): Promise<StoreProduct[]> {
       offset += page.products.length;
       if (!page.products.length) break;
     }
-    return products.length ? products.map(mapMedusaProduct) : fallbackProducts;
+    return products.map(mapMedusaProduct);
   } catch {
     return fallbackProducts;
   }

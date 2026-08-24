@@ -1,9 +1,9 @@
 "use client";
 
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/components/storefront/cart-provider";
+import { ProductImage } from "@/components/storefront/product-image";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ export default function CartPage() {
           <section className="cart-lines">
             {lines.map((line) => (
               <article key={line.id}>
-                <div className="cart-line-image"><Image src={line.image} alt={line.title} fill sizes="140px" /></div>
+                <div className="cart-line-image"><ProductImage src={line.image} alt={line.title} fill sizes="140px" /></div>
                 <div className="cart-line-copy"><span>Pickup item</span><h2>{line.title}</h2><strong>{formatMoney(line.price)}</strong></div>
                 <div className="quantity-control">
                   <button onClick={() => void update(line.id, line.quantity - 1)} disabled={busy} aria-label="Decrease quantity"><Minus /></button>

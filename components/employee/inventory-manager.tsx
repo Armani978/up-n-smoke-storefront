@@ -1,12 +1,14 @@
 "use client";
 
-import { Archive, Edit3, PackagePlus, Save, Search, X } from "lucide-react";
+import { Archive, Edit3, Eye, EyeOff, LoaderCircle, PackagePlus, Save, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ProductImage } from "@/components/storefront/product-image";
 import type { AdminProduct } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { DataFreshness } from "@/components/employee/data-freshness";
+import { isProductImageFallback } from "@/lib/product-images";
 
 type ProductForm = {
   name: string;
@@ -38,21 +40,24 @@ export function InventoryManager({
 }) {
   const [products, setProducts] = useState(initialProducts);
   const [query, setQuery] = useState("");
+  const [storefrontFilter, setStorefrontFilter] = useState<"all" | "shown" | "hidden">("all");
   const [editing, setEditing] = useState<AdminProduct | "new" | null>(null);
   const [form, setForm] = useState<ProductForm>(empty);
   const [stockDraft, setStockDraft] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
+  const [visibilityBusy, setVisibilityBusy] = useState<string | null>(null);
   const [limit, setLimit] = useState(100);
   const visible = useMemo(() => {
     const q = query.toLowerCase();
-    return products.filter(
-      (product) =>
-        !q ||
-        [product.name, product.sku, product.category].some((value) =>
-          value.toLowerCase().includes(q),
-        ),
-    );
-  }, [products, query]);
+    return products.filter((product) => {
+      const matchesQuery = !q || [product.name, product.sku, product.category]
+        .some((value) => value.toLowerCase().includes(q));
+      const matchesStorefront = storefrontFilter === "all"
+        || (storefrontFilter === "shown" && product.onStorefront)
+        || (storefrontFilter === "hidden" && !product.onStorefront);
+      return matchesQuery && matchesStorefront;
+    });
+  }, [products, query, storefrontFilter]);
   const openEdit = (product: AdminProduct) => {
     setEditing(product);
     setForm({
@@ -61,7 +66,7 @@ export function InventoryManager({
       description: product.description,
       price: String(product.price),
       status: product.status,
-      image: product.image.startsWith("/product-placeholder")
+      image: isProductImageFallback(product.image)
         ? ""
         : product.image,
     });
@@ -137,6 +142,23 @@ export function InventoryManager({
     } else
       setMessage((await response.json()).error ?? "Unable to update stock.");
   }
+  async function setStorefront(product: AdminProduct, onStorefront: boolean) {
+    setVisibilityBusy(product.id);
+    const response = await fetch(`/api/employee/products/${product.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storefront: onStorefront }),
+    });
+    if (response.ok) {
+      setProducts((items) => items.map((item) => item.id === product.id
+        ? { ...item, onStorefront, status: onStorefront ? "published" : "draft" }
+        : item));
+      setMessage(`${product.name} is now ${onStorefront ? "shown on" : "hidden from"} the storefront.`);
+    } else {
+      setMessage((await response.json()).error ?? "Unable to change storefront visibility.");
+    }
+    setVisibilityBusy(null);
+  }
   async function archive(product: AdminProduct) {
     if (!window.confirm(`Archive ${product.name} from the storefront?`)) return;
     const response = await fetch(`/api/employee/products/${product.id}`, {
@@ -184,9 +206,18 @@ export function InventoryManager({
             placeholder="SEARCH PRODUCT, SKU, CATEGORY"
           />
         </label>
-        <span>
-          {visible.length} / {products.length} products
-        </span>
+        <div className="storefront-filters" aria-label="Filter inventory by storefront visibility">
+          {([['all', 'All'], ['shown', 'On storefront'], ['hidden', 'Hidden']] as const).map(([value, label]) => (
+            <button
+              key={value}
+              className={storefrontFilter === value ? "active" : ""}
+              onClick={() => { setStorefrontFilter(value); setLimit(100); }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <span>{visible.length} / {products.length} products</span>
       </div>
       {message && (
         <p className="ops-message">
@@ -201,13 +232,15 @@ export function InventoryManager({
           <span>Product</span>
           <span>Price</span>
           <span>Stock</span>
-          <span>Status</span>
+          <span>Storefront</span>
           <span>Action</span>
         </header>
         {visible.slice(0, limit).map((product) => (
           <article key={product.id}>
             <div className="inventory-name">
-              <i style={{ background: product.accent }} />
+              <div className="inventory-thumb" style={{ "--inventory-accent": product.accent } as React.CSSProperties}>
+                <ProductImage src={product.image} alt="" fill sizes="48px" />
+              </div>
               <span>
                 <b>{product.name}</b>
                 <small>
@@ -237,7 +270,18 @@ export function InventoryManager({
                 </button>
               )}
             </div>
-            <em data-status={product.status}>{product.status}</em>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={product.onStorefront}
+              aria-label={`${product.onStorefront ? "Hide" : "Show"} ${product.name} on storefront`}
+              className="storefront-switch"
+              disabled={!canWrite || visibilityBusy === product.id}
+              onClick={() => void setStorefront(product, !product.onStorefront)}
+            >
+              <i>{visibilityBusy === product.id ? <LoaderCircle className="spin" /> : product.onStorefront ? <Eye /> : <EyeOff />}</i>
+              <span>{product.onStorefront ? "Shown" : "Hidden"}</span>
+            </button>
             <div className="row-actions">
               {canWrite && (
                 <>
@@ -309,15 +353,15 @@ export function InventoryManager({
                 />
               </label>
               <label>
-                Status
+                Storefront visibility
                 <select
                   value={form.status}
                   onChange={(event) =>
                     setForm({ ...form, status: event.target.value })
                   }
                 >
-                  <option value="published">Published</option>
-                  <option value="draft">Draft</option>
+                  <option value="published">Shown on storefront</option>
+                  <option value="draft">Hidden from storefront</option>
                 </select>
               </label>
               <label className="wide">

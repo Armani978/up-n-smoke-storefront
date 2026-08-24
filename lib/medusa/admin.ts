@@ -3,6 +3,7 @@ import "server-only";
 import type { EmployeeSession } from "@/lib/types";
 import type { AdminOrder, AdminProduct, PickupStatus } from "@/lib/types";
 import { MEDUSA_BACKEND_URL } from "@/lib/medusa/config";
+import { resolveProductImage } from "@/lib/product-images";
 
 export async function adminFetch<T>(session: EmployeeSession, path: string, init?: RequestInit, strict = false): Promise<T | null> {
   try {
@@ -25,6 +26,7 @@ export async function adminFetch<T>(session: EmployeeSession, path: string, init
 type RawProduct = {
   id: string; title: string; handle: string; description?: string; thumbnail?: string; status?: string;
   categories?: Array<{ name: string }>;
+  sales_channels?: Array<{ id: string }>;
   variants?: Array<{
     id: string; sku?: string; inventory_quantity?: number;
     prices?: Array<{ amount: number; currency_code: string }>;
@@ -33,7 +35,9 @@ type RawProduct = {
 };
 
 export async function listAdminProducts(session: EmployeeSession, strict = false): Promise<AdminProduct[]> {
-  const fields = "*variants,+variants.inventory_quantity,*variants.prices,*variants.inventory_items.inventory.location_levels,*categories,+thumbnail";
+  const fields = "*variants,+variants.inventory_quantity,*variants.prices,*variants.inventory_items.inventory.location_levels,*categories,*sales_channels,+thumbnail";
+  const channels = await adminFetch<{ sales_channels: Array<{ id: string; name: string }> }>(session, "/admin/sales-channels?limit=100", undefined, strict);
+  const storefrontChannel = channels?.sales_channels?.find((item) => /up n smoke|online pickup/i.test(item.name)) ?? channels?.sales_channels?.[0];
   const products: RawProduct[] = [];
   let offset = 0;
   let count = 1;
@@ -49,20 +53,24 @@ export async function listAdminProducts(session: EmployeeSession, strict = false
     const variant = product.variants?.[0];
     const inventory = variant?.inventory_items?.[0]?.inventory;
     const level = inventory?.location_levels?.[0];
+    const sku = variant?.sku ?? product.handle;
     return {
       id: product.id,
       variantId: variant?.id ?? "",
       name: product.title,
       handle: product.handle,
-      sku: variant?.sku ?? product.handle,
+      sku,
       category: product.categories?.[0]?.name ?? "Other",
       description: product.description ?? "",
-      image: product.thumbnail ?? "https://placehold.co/600x700/f4ff35/10110d?text=UNS",
+      image: resolveProductImage(product.thumbnail, sku),
       price: Number(variant?.prices?.find((price) => price.currency_code === "usd")?.amount ?? 0),
       stock: Number(level?.stocked_quantity ?? variant?.inventory_quantity ?? 0),
       accent: index % 2 ? "#ffd84a" : "#f4ff35",
       signals: [],
       status: product.status ?? "published",
+      onStorefront: product.status === "published" && (storefrontChannel
+        ? Boolean(product.sales_channels?.some((channel) => channel.id === storefrontChannel.id))
+        : Boolean(product.sales_channels?.length)),
       inventoryItemId: inventory?.id ?? variant?.inventory_items?.[0]?.inventory_item_id,
       inventoryLevelId: level?.id,
       inventoryLocationId: level?.location_id,

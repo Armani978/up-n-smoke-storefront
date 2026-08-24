@@ -158,7 +158,7 @@ export function PickupQueue({
                   <Check /> {label[order.pickupStatus]}
                 </Button>
               )}
-              {["ready", "arrived"].includes(order.pickupStatus) && (
+              {!["completed", "cancelled"].includes(order.pickupStatus) && (
                 <Button asChild size="sm">
                   <Link href="/employee/pickups/scan">Verify pickup</Link>
                 </Button>
