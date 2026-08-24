@@ -32,7 +32,7 @@ export function PromoEditor() {
       if (!active) return;
       setSaved(clonePromo(promoPayload.promo));
       setDraft(clonePromo(promoPayload.promo));
-      setProducts(productsPayload.products.filter((product) => product.onStorefront));
+      setProducts(productsPayload.products.filter((product) => product.status === "published"));
     }).catch((reason) => {
       if (active) setError(reason instanceof Error ? reason.message : "Promo Studio could not load.");
     }).finally(() => {
