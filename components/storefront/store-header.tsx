@@ -145,7 +145,7 @@ export function StoreHeader() {
         </nav>
         <div className="drawer-foot">
           <p>Reserve online.<br />Roll in.<br />Pick up.</p>
-          <span>655 S Willow St<br />Manchester, NH<br />Pickup in 15–20 min</span>
+          <span>655 S Willow St<br />Manchester, NH<br />Pickup in 15-20 min</span>
         </div>
       </aside>
     </>

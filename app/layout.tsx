@@ -3,6 +3,7 @@ import { Archivo, Barlow_Condensed } from "next/font/google";
 import { StoreProviders } from "@/components/storefront/providers";
 import { getCatalog } from "@/lib/medusa/catalog";
 import "./globals.css";
+import "./promo.css";
 
 const display = Barlow_Condensed({
   subsets: ["latin"],

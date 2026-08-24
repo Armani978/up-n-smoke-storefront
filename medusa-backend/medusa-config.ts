@@ -29,5 +29,8 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/pickup-verification",
     },
+    {
+      resolve: "./src/modules/storefront-promo",
+    },
   ],
 })

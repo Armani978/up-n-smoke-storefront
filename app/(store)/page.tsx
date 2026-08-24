@@ -1,15 +1,17 @@
 import { ArrowDownRight, ArrowUpRight, Clock3, MapPin, ScanLine } from "lucide-react";
 import Link from "next/link";
 import { ProductCard } from "@/components/storefront/product-card";
+import { PromoLanding } from "@/components/storefront/promo-landing";
 import { getCatalog } from "@/lib/medusa/catalog";
+import { getStorefrontPromo } from "@/lib/promo";
 
 export default async function HomePage() {
-  const products = await getCatalog();
+  const [products, promo] = await Promise.all([getCatalog(), getStorefrontPromo()]);
   const featured = products.slice(0, 4);
 
   return (
     <main>
-      <section className="home-hero">
+      {promo.active ? <PromoLanding promo={promo} catalog={products} /> : <section className="home-hero">
         <div className="hero-grid" aria-hidden="true" />
         <div className="hero-kicker"><span>01</span> Manchester’s 21+ pickup counter</div>
         <h1><span>FLAVOR.</span><br /><em>LOCKED.</em><br /><span>LOCAL.</span></h1>
@@ -18,14 +20,14 @@ export default async function HomePage() {
         <div className="hero-orbit orbit-two">ID<small>ready</small></div>
         <div className="hero-stamp"><ScanLine /><span>GEEK BAR + RAZ<br />LOCAL PICKUP</span></div>
         <a href="#featured" className="hero-scroll"><ArrowDownRight /> See featured flavors</a>
-      </section>
+      </section>}
 
       <section className="ticker" aria-label="Store benefits">
         <div>GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦ PICKUP ONLY ✦ 21+ ID REQUIRED ✦ MANCHESTER NH ✦ GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦</div>
       </section>
 
       <section className="proof-strip">
-        <article><Clock3 /><span>Fast lane</span><strong>15–20 min</strong></article>
+        <article><Clock3 /><span>Fast lane</span><strong>15-20 min</strong></article>
         <article><MapPin /><span>Your counter</span><strong>655 S Willow</strong></article>
         <article><ScanLine /><span>Stock signal</span><strong>Medusa live</strong></article>
       </section>
@@ -33,7 +35,7 @@ export default async function HomePage() {
       <section id="featured" className="featured-drop">
         <div className="section-heading">
           <div><span className="eyebrow">Featured devices / verified product imagery</span><h2>GEEK BAR.<br /><em>MEET RAZ.</em></h2></div>
-          <p>Shop by the exact device and flavor—puff rating, nicotine level, price, and local quantity are visible before you reserve.</p>
+          <p>Shop by the exact device and flavor: puff rating, nicotine level, price, and local quantity are visible before you reserve.</p>
         </div>
         <div className="featured-grid">
           {featured.map((product, index) => <ProductCard key={product.id} product={product} featured={index === 0} />)}

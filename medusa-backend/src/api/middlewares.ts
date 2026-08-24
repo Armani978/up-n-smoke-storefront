@@ -11,5 +11,9 @@ export default defineMiddlewares({
       matcher: "/admin/pickup-verifications*",
       middlewares: [authenticate("user", ["session", "bearer"])],
     },
+    {
+      matcher: "/admin/storefront-promo",
+      middlewares: [authenticate("user", ["session", "bearer"])],
+    },
   ],
 })
