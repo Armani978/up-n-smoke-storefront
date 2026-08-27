@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:ios": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-ios-local.ps1",
-    "build": "next build",
+    "build": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

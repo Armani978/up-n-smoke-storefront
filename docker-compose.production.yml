@@ -54,6 +54,15 @@ services:
       PICKUP_LOCATION_NAME: ${PICKUP_LOCATION_NAME:-Manchester Counter}
       PICKUP_QR_TTL_DAYS: ${PICKUP_QR_TTL_DAYS:-30}
       REQUIRE_ID_FOR_ALL_PICKUPS: ${REQUIRE_ID_FOR_ALL_PICKUPS:-true}
+      # Medusa's own database connection loader (pg-connection-loader) retries
+      # a failed initial connection 5 times at a 1s interval by default. That
+      # is not always enough headroom if Postgres is still finishing startup
+      # or briefly busy when this container starts, and a failed connection
+      # crashes the process rather than backing off further. Widen the
+      # window so a slow-starting or momentarily busy database doesn't flap
+      # the container through restart loops.
+      __MEDUSA_DB_CONNECTION_MAX_RETRIES: ${MEDUSA_DB_CONNECTION_MAX_RETRIES:-20}
+      __MEDUSA_DB_CONNECTION_RETRY_DELAY: ${MEDUSA_DB_CONNECTION_RETRY_DELAY:-2000}
     ports:
       - "127.0.0.1:9000:9000"
     depends_on:

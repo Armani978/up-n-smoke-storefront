@@ -19,6 +19,8 @@
     "db:migrate": "medusa db:migrate",
     "seed": "medusa exec ./src/migration-scripts/initial-data-seed.ts",
     "photos": "medusa exec ./src/migration-scripts/verified-product-photos.ts",
+    "scan:stranded-pickups": "medusa exec ./src/migration-scripts/scan-stranded-pickup-completions.ts",
+    "remediate:stranded-pickups": "medusa exec ./src/migration-scripts/remediate-stranded-pickup-completions.ts",
     "user": "medusa user",
     "lint": "medusa lint",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
