@@ -1,7 +1,7 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import type { ILockingModule, IOrderModuleService } from "@medusajs/framework/types"
+import type { ILockingModule } from "@medusajs/framework/types"
 import { Modules } from "@medusajs/framework/utils"
-import { completeOrderWorkflow, createOrderFulfillmentWorkflow, markOrderFulfillmentAsDeliveredWorkflow } from "@medusajs/medusa/core-flows"
+import { completeOrderWorkflow, createOrderFulfillmentWorkflow, markOrderFulfillmentAsDeliveredWorkflow, updateOrderWorkflow } from "@medusajs/medusa/core-flows"
 import { createPickupToken, hashPickupToken } from "../../../../../modules/pickup-verification/token"
 import { audit, canAttemptPickupCompletion, fulfillmentItemsForOrder, orderById, pickupCompletionPlan, pickupService, pickupStatus, publicOrder } from "../../../../pickup-verification-helpers"
 
@@ -51,14 +51,13 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
         throw Object.assign(new Error("A passing server-side age verification is required."), { status: 409 })
       }
 
+      await service.updatePickupVerifications({ id: verification.id, status: "processing" })
+
       try {
         const plan = pickupCompletionPlan(order)
-        let fulfillmentId = plan.fulfillmentId
+        const fulfillmentIdsToDeliver = [...plan.undeliveredFulfillmentIds]
         if (plan.needsFulfillmentCreation) {
           const fulfillmentItems = fulfillmentItemsForOrder(order)
-          if (!fulfillmentItems.length) {
-            throw Object.assign(new Error("This order has no unfulfilled items."), { status: 409 })
-          }
           const { result: fulfillment } = await createOrderFulfillmentWorkflow(req.scope).run({
             input: {
               order_id: order.id,
@@ -66,12 +65,9 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
               no_notification: false,
             },
           })
-          fulfillmentId = fulfillment.id
+          fulfillmentIdsToDeliver.push(fulfillment.id)
         }
-        if (!fulfillmentId) {
-          throw Object.assign(new Error("Pickup fulfillment could not be created."), { status: 500 })
-        }
-        if (plan.needsDeliveryMark) {
+        for (const fulfillmentId of fulfillmentIdsToDeliver) {
           await markOrderFulfillmentAsDeliveredWorkflow(req.scope).run({
             input: {
               orderId: order.id,
@@ -85,21 +81,22 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
             input: { orderIds: [order.id] },
           })
         }
-        const orderService = req.scope.resolve(Modules.ORDER) as IOrderModuleService
-        await orderService.updateOrders([{
-          id: order.id,
-          metadata: {
-            ...(order.metadata || {}),
-            pickup_status: "completed",
-            pickup_completed_at: new Date().toISOString(),
-            pickup_completed_by: req.auth_context?.actor_id || "employee",
-          },
-        }])
+        const actorId = req.auth_context?.actor_id || "employee"
+        const latestOrder = await orderById(req, order.id)
+        const completedMetadata = {
+          ...(latestOrder?.metadata || order.metadata || {}),
+          pickup_status: "completed",
+          pickup_completed_at: new Date().toISOString(),
+          pickup_completed_by: actorId,
+        }
+        await updateOrderWorkflow(req.scope).run({
+          input: { id: order.id, user_id: actorId, metadata: completedMetadata },
+        })
         const completed = await service.updatePickupVerifications({
           id: verification.id,
           status: "completed",
           completed_at: new Date(),
-          completed_by: req.auth_context?.actor_id || "employee",
+          completed_by: actorId,
           token_hash: hashPickupToken(createPickupToken()),
           token_expires_at: new Date(),
         })
@@ -108,11 +105,9 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
           result: "completed",
           metadata: { checklist_complete: true },
         })
-        return publicOrder({ ...order, metadata: { ...(order.metadata || {}), pickup_status: "completed" } }, completed)
+        return publicOrder({ ...order, metadata: completedMetadata }, completed)
       } catch (error) {
-        if (verification.status === "processing") {
-          await service.updatePickupVerifications({ id: verification.id, status: "active" })
-        }
+        await service.updatePickupVerifications({ id: verification.id, status: "active" })
         console.error("[pickup-complete] fulfillment failed", {
           verificationId: verification.id,
           orderId: order.id,

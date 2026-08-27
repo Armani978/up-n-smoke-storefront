@@ -12,6 +12,7 @@ const PickupVerification = model.define("pickup_verification", {
   verification_method: model.enum(["manual_dob", "id_scan", "visual_check"]).nullable(),
   completed_at: model.dateTime().nullable(),
   completed_by: model.text().nullable(),
+  // eslint-disable-next-line @medusajs/link-no-cross-module-relationship -- PickupAuditEvent lives in this same module (src/modules/pickup-verification/models/); this rule's Windows path comparison (path.resolve's backslash-separated output vs. its own forward-slash-normalized moduleRoot) false-positives as "cross-module" on Windows only.
   audit_events: model.hasMany(() => PickupAuditEvent, { mappedBy: "verification" }),
 })
 

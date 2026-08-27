@@ -46,11 +46,12 @@ export function fulfillmentItemsForOrder(order: any) {
 
 export function pickupCompletionPlan(order: any) {
   const activeFulfillments = (order.fulfillments || []).filter((fulfillment: any) => !fulfillment.canceled_at)
-  const existing = activeFulfillments[0]
+  const undeliveredFulfillmentIds = activeFulfillments
+    .filter((fulfillment: any) => !fulfillment.delivered_at)
+    .map((fulfillment: any) => fulfillment.id as string)
   return {
-    fulfillmentId: existing?.id as string | undefined,
-    needsFulfillmentCreation: !existing,
-    needsDeliveryMark: !existing?.delivered_at,
+    undeliveredFulfillmentIds,
+    needsFulfillmentCreation: fulfillmentItemsForOrder(order).length > 0,
     needsOrderCompletion: order.status !== "completed",
   }
 }
