@@ -10,4 +10,5 @@ certificates
 output
 outputs
 *.log
-
+**/*.test.ts
+**/*.test.tsx
