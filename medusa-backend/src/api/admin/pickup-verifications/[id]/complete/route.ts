@@ -1,9 +1,9 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import type { ILockingModule, IOrderModuleService } from "@medusajs/framework/types"
 import { Modules } from "@medusajs/framework/utils"
-import { createOrderFulfillmentWorkflow } from "@medusajs/medusa/core-flows"
+import { completeOrderWorkflow, createOrderFulfillmentWorkflow, markOrderFulfillmentAsDeliveredWorkflow } from "@medusajs/medusa/core-flows"
 import { createPickupToken, hashPickupToken } from "../../../../../modules/pickup-verification/token"
-import { audit, canAttemptPickupCompletion, fulfillmentItemsForOrder, orderById, pickupService, pickupStatus, publicOrder } from "../../../../pickup-verification-helpers"
+import { audit, canAttemptPickupCompletion, fulfillmentItemsForOrder, orderById, pickupCompletionPlan, pickupService, pickupStatus, publicOrder } from "../../../../pickup-verification-helpers"
 
 type Body = {
   checklist?: {
@@ -52,18 +52,37 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
       }
 
       try {
-        const activeFulfillments = (order.fulfillments || []).filter((fulfillment: any) => !fulfillment.canceled_at)
-        if (!activeFulfillments.length) {
+        const plan = pickupCompletionPlan(order)
+        let fulfillmentId = plan.fulfillmentId
+        if (plan.needsFulfillmentCreation) {
           const fulfillmentItems = fulfillmentItemsForOrder(order)
           if (!fulfillmentItems.length) {
             throw Object.assign(new Error("This order has no unfulfilled items."), { status: 409 })
           }
-          await createOrderFulfillmentWorkflow(req.scope).run({
+          const { result: fulfillment } = await createOrderFulfillmentWorkflow(req.scope).run({
             input: {
               order_id: order.id,
               items: fulfillmentItems,
               no_notification: false,
             },
+          })
+          fulfillmentId = fulfillment.id
+        }
+        if (!fulfillmentId) {
+          throw Object.assign(new Error("Pickup fulfillment could not be created."), { status: 500 })
+        }
+        if (plan.needsDeliveryMark) {
+          await markOrderFulfillmentAsDeliveredWorkflow(req.scope).run({
+            input: {
+              orderId: order.id,
+              fulfillmentId,
+              no_notification: false,
+            },
+          })
+        }
+        if (plan.needsOrderCompletion) {
+          await completeOrderWorkflow(req.scope).run({
+            input: { orderIds: [order.id] },
           })
         }
         const orderService = req.scope.resolve(Modules.ORDER) as IOrderModuleService

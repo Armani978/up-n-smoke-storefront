@@ -29,7 +29,7 @@ export async function orderById(req: MedusaRequest, id: string) {
       "shipping_address.last_name", "items.id", "items.title", "items.product_title", "items.variant_title",
       "items.variant_sku", "items.quantity", "items.unit_price", "items.total", "items.thumbnail",
       "items.product.metadata", "items.detail.id", "items.detail.quantity", "items.detail.fulfilled_quantity",
-      "fulfillments.id", "fulfillments.canceled_at",
+      "fulfillments.id", "fulfillments.canceled_at", "fulfillments.delivered_at",
     ],
     filters: { id },
   })
@@ -42,6 +42,17 @@ export function fulfillmentItemsForOrder(order: any) {
     const remaining = Number(item.detail?.quantity ?? item.quantity ?? 0) - Number(item.detail?.fulfilled_quantity ?? 0)
     return id && remaining > 0 ? [{ id, quantity: remaining }] : []
   })
+}
+
+export function pickupCompletionPlan(order: any) {
+  const activeFulfillments = (order.fulfillments || []).filter((fulfillment: any) => !fulfillment.canceled_at)
+  const existing = activeFulfillments[0]
+  return {
+    fulfillmentId: existing?.id as string | undefined,
+    needsFulfillmentCreation: !existing,
+    needsDeliveryMark: !existing?.delivered_at,
+    needsOrderCompletion: order.status !== "completed",
+  }
 }
 
 export function canAttemptPickupCompletion(status: unknown) {
