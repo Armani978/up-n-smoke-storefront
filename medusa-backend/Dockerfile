@@ -10,7 +10,10 @@ FROM node:22-bookworm-slim AS builder
 
 WORKDIR /server
 
-ENV NODE_ENV=production
+# `medusa build` loads medusa-config.ts, but runtime signing secrets must not
+# enter the image build context. The final stage restores production mode and
+# enforces those secrets when the server actually boots.
+ENV NODE_ENV=development
 
 COPY --from=dependencies /server/node_modules ./node_modules
 COPY . .
