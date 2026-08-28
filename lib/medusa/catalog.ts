@@ -16,6 +16,7 @@ type MedusaProduct = {
   metadata?: Record<string, unknown> | null;
   variants?: Array<{
     id: string;
+    title?: string | null;
     sku?: string | null;
     inventory_quantity?: number;
     calculated_price?: { calculated_amount?: number; currency_code?: string };
@@ -40,6 +41,16 @@ export function mapMedusaProduct(product: MedusaProduct, index: number): StorePr
   const sku = variant?.sku ?? product.handle;
   const image = resolveProductImage(sourceImage, sku);
 
+  const variants = product.variants?.length && product.variants.length > 1
+    ? product.variants.map((item) => ({
+        id: item.id,
+        title: item.title ?? item.sku ?? item.id,
+        sku: item.sku ?? "",
+        price: Number(item.calculated_price?.calculated_amount ?? item.prices?.find((p) => p.currency_code === "usd")?.amount ?? 0),
+        stock: Math.max(0, Number(item.inventory_quantity ?? 0)),
+      }))
+    : undefined;
+
   return {
     id: product.id,
     variantId: variant?.id ?? "",
@@ -52,6 +63,7 @@ export function mapMedusaProduct(product: MedusaProduct, index: number): StorePr
     price: Number(price),
     stock,
     accent: brand === "RAZ" ? "#74e8ff" : accents[index % accents.length],
+    variants,
     signals: [
       { label: "Puffs", value: puffs },
       { label: "Nicotine", value: nicotine },
@@ -86,7 +98,7 @@ export async function getCatalog(): Promise<StoreProduct[]> {
         limit: "100",
         offset: String(offset),
         region_id: region.id,
-        fields: "*variants.calculated_price,+variants.inventory_quantity,+categories,+images",
+        fields: "*variants.calculated_price,+variants.inventory_quantity,+categories.name,+images",
       });
       const response = await fetch(`${MEDUSA_BACKEND_URL}/store/products?${params}`, {
         headers: storeHeaders(),

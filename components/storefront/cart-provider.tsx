@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { getMedusaClient } from "@/lib/medusa/client";
 import type { CartLine, StoreProduct } from "@/lib/types";
 
@@ -19,6 +19,11 @@ type CartContextValue = {
   count: number;
   subtotal: number;
   busy: boolean;
+  /** True once the server-backed cart has been loaded (or attempted) at
+   * least once. Callers that redirect on an empty cart must wait for this
+   * before deciding — otherwise a fresh page load's still-empty initial
+   * state looks indistinguishable from a genuinely empty cart. */
+  ready: boolean;
   add: (product: StoreProduct, quantity?: number) => Promise<void>;
   update: (lineId: string, quantity: number) => Promise<void>;
   completePickup: (details: PickupDetails) => Promise<{ id: string; displayId: string }>;
@@ -30,6 +35,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children, catalog }: { children: React.ReactNode; catalog: StoreProduct[] }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
 
   const mapCart = useCallback(
     (cart: Record<string, unknown>) => {
@@ -74,13 +80,27 @@ export function CartProvider({ children, catalog }: { children: React.ReactNode;
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY) return;
+    if (!process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY) {
+      setReady(true);
+      return;
+    }
     try {
       mapCart((await getOrCreateCart()) as unknown as Record<string, unknown>);
     } catch {
       setLines([]);
+    } finally {
+      setReady(true);
     }
   }, [getOrCreateCart, mapCart]);
+
+  // A fresh page load (full navigation, new tab) mounts a new CartProvider
+  // with empty in-memory state; without loading the server-backed cart here,
+  // every reload looks like an empty cart even when items were persisted.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh()'s setState calls run after its internal awaits (cart retrieval/creation), not synchronously; this is the standard mount-time data-load pattern the rule's static analysis can't distinguish from a synchronous call.
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const add = useCallback(
     async (product: StoreProduct, quantity = 1) => {
@@ -163,11 +183,12 @@ export function CartProvider({ children, catalog }: { children: React.ReactNode;
     count: lines.reduce((sum, line) => sum + line.quantity, 0),
     subtotal: lines.reduce((sum, line) => sum + line.price * line.quantity, 0),
     busy,
+    ready,
     add,
     update,
     completePickup,
     refresh,
-  }), [lines, busy, add, update, completePickup, refresh]);
+  }), [lines, busy, ready, add, update, completePickup, refresh]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

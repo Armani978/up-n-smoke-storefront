@@ -35,7 +35,7 @@ async function fetchPickupPass(orderId: string, email: string) {
 }
 
 export default function CheckoutPage() {
-  const { lines, subtotal, completePickup, busy } = useCart();
+  const { lines, subtotal, completePickup, busy, ready } = useCart();
   const [complete, setComplete] = useState<CheckoutCompletion | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -43,8 +43,8 @@ export default function CheckoutPage() {
   const total = subtotal;
 
   useEffect(() => {
-    if (!lines.length && !complete && !submitting) router.replace("/cart");
-  }, [complete, lines.length, router, submitting]);
+    if (ready && !lines.length && !complete && !submitting) router.replace("/cart");
+  }, [complete, lines.length, ready, router, submitting]);
 
   async function loadPass(orderId: string, email: string) {
     setComplete((current) => current ? { ...current, passLoading: true, passError: undefined } : current);
@@ -85,9 +85,13 @@ export default function CheckoutPage() {
   }
 
   if (!lines.length && !complete) {
-    return submitting
-      ? <main className="checkout-pass-loading" aria-live="polite"><LoaderCircle className="spin" /><span>ORDER PLACED</span><h1>CREATING<br /><em>YOUR CODE.</em></h1><p>Keep this page open while we secure your pickup code.</p></main>
-      : null;
+    if (submitting) {
+      return <main className="checkout-pass-loading" aria-live="polite"><LoaderCircle className="spin" /><span>ORDER PLACED</span><h1>CREATING<br /><em>YOUR CODE.</em></h1><p>Keep this page open while we secure your pickup code.</p></main>;
+    }
+    if (!ready) {
+      return <main className="checkout-pass-loading" aria-live="polite"><LoaderCircle className="spin" /><span>ONE SECOND</span><h1>LOADING<br /><em>YOUR BAG.</em></h1></main>;
+    }
+    return null;
   }
 
   if (complete) {

@@ -1,11 +1,10 @@
-import { ArrowLeft, Check, MapPin } from "lucide-react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductBuyPanel } from "@/components/storefront/product-buy-panel";
 import { ProductImage } from "@/components/storefront/product-image";
 import { getProduct } from "@/lib/medusa/catalog";
-import { formatMoney } from "@/lib/utils";
 
 type Props = { params: Promise<{ handle: string }> };
 
@@ -33,9 +32,7 @@ export default async function ProductPage({ params }: Props) {
           <span className="eyebrow">{product.category} / {product.sku}</span>
           <h1>{product.name}</h1>
           <p>{product.description}</p>
-          <strong>{formatMoney(product.price)}</strong>
           <ul>
-            <li><Check /> {product.stock > 0 ? `${product.stock} available now` : "Restock in progress"}</li>
             <li><MapPin /> Pickup at 655 S Willow St</li>
           </ul>
           <ProductBuyPanel product={product} />

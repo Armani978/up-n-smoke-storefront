@@ -3,6 +3,14 @@ export type ProductSignal = {
   value: string;
 };
 
+export type ProductVariantOption = {
+  id: string;
+  title: string;
+  sku: string;
+  price: number;
+  stock: number;
+};
+
 export type StoreProduct = {
   id: string;
   variantId: string;
@@ -21,6 +29,11 @@ export type StoreProduct = {
   flavor?: string;
   nicotine?: string;
   puffs?: string;
+  /** Every purchasable variant, in Medusa's own order. Only meaningful (and
+   * only rendered as a selector) when a product has more than one; the
+   * top-level variantId/price/stock always mirror variants[0] so existing
+   * single-variant products are unaffected. */
+  variants?: ProductVariantOption[];
 };
 
 export type CartLine = {

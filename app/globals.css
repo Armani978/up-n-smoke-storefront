@@ -205,7 +205,13 @@ button { cursor: pointer; }
 .product-copy li { display: flex; gap: 10px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); font-size: 12px; font-weight: 700; }
 .product-copy li svg { width: 16px; color: var(--olive); }
 .buy-panel { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.buy-panel > p { width: 100%; margin: 0; font-size: 11px; color: var(--olive); font-weight: 800; }
+.buy-panel > p, .buy-panel-stock { width: 100%; margin: 0; font-size: 11px; color: var(--olive); font-weight: 800; display: flex; gap: 10px; align-items: center; }
+.buy-panel-stock svg { width: 16px; }
+.buy-panel-price { display: block; width: 100%; font: 900 48px/1 var(--font-display); margin: 0 0 4px; }
+.variant-control { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
+.variant-control button { border: 1px solid var(--ink); border-radius: 999px; padding: 10px 16px; background: transparent; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.variant-control button.active { background: var(--ink); color: var(--acid); }
+.variant-control button:disabled { opacity: .4; }
 .quantity-control { border: 1px solid var(--ink); border-radius: 999px; display: inline-flex; align-items: center; background: white; overflow: hidden; }
 .quantity-control button { width: 42px; height: 42px; border: 0; background: transparent; display: grid; place-items: center; }
 .quantity-control button svg { width: 15px; }
