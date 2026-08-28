@@ -33,7 +33,10 @@ RUN --mount=type=cache,target=/root/.npm npm install --global npm@11.12.1 \
 COPY --from=builder /server/.medusa/server ./
 
 COPY docker-entrypoint.sh /usr/local/bin/upnsmoke-medusa-entrypoint
-RUN chmod +x /usr/local/bin/upnsmoke-medusa-entrypoint
+# .gitattributes keeps this LF in the repository; strip CR here as well so the
+# image still boots if the build context arrives from a Windows checkout.
+RUN sed -i 's/\r$//' /usr/local/bin/upnsmoke-medusa-entrypoint \
+  && chmod +x /usr/local/bin/upnsmoke-medusa-entrypoint
 
 EXPOSE 9000
 

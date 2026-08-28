@@ -1,0 +1,21 @@
+# Normalize text files to LF in the repository. Without this, committing from
+# Windows stores CRLF in the blobs themselves, and `git archive` then ships
+# CRLF into the Linux container build — which makes shell scripts fail at
+# exec time with a "no such file or directory" on the interpreter line.
+* text=auto eol=lf
+
+# Files executed by a Linux shell must be LF regardless of platform.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+Dockerfile text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.dump binary
