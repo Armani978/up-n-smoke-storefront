@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parsePickupQrPayload } from "@/lib/pickup/qr";
 
 export function PickupScanner() {
   const video = useRef<HTMLVideoElement>(null);
@@ -37,9 +38,9 @@ export function PickupScanner() {
       controls.current = await reader.decodeFromConstraints({ video: { facingMode: { ideal: "environment" } } }, video.current!, (result) => {
         if (!result) return;
         const value = result.getText();
-        const match = /^UNS-PICKUP:1:([A-Za-z0-9_-]{40,})$/.exec(value);
-        if (!match) { setError("That is not an Up N Smoke pickup QR code."); return; }
-        stop(); void resolve({ token: match[1] });
+        const code = parsePickupQrPayload(value);
+        if (!code) { setError("That is not an Up N Smoke pickup QR code."); return; }
+        stop(); void resolve({ token: code });
       });
     } catch (caught) {
       const name = caught instanceof DOMException ? caught.name : "";

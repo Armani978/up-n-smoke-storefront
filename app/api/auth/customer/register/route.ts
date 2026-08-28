@@ -29,6 +29,21 @@ export async function POST(request: NextRequest) {
     const failure = (await customerResponse.json()) as { message?: string };
     return NextResponse.redirect(redirectUrl(`/login?mode=register&error=${encodeURIComponent(failure.message ?? "Unable to create customer profile.")}`, request), 303);
   }
-  await setCustomerSession({ email, token: auth.token });
+  // The token from /auth/customer/emailpass/register was minted before the
+  // customer record existed, so its actor_id is permanently empty — Medusa
+  // links the customer to the auth identity as a side effect of the
+  // /store/customers call above, but a JWT already issued doesn't retroactively
+  // pick that up. Any customer-scoped write (profile/address update or delete)
+  // that resolves the customer id from req.auth_context.actor_id would silently
+  // 401 for the lifetime of that session. Re-authenticate to get a fresh token
+  // with the real actor_id, the same one a subsequent login would produce.
+  const freshAuth = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+  });
+  const fresh = (await freshAuth.json()) as { token?: string };
+  await setCustomerSession({ email, token: fresh.token ?? auth.token });
   return NextResponse.redirect(redirectUrl("/account", request), 303);
 }

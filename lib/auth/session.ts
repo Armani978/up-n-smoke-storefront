@@ -80,19 +80,27 @@ export const getEmployeeSession = cache(async () => {
   if (!session) return null;
   const role = roleForEmail(session.email);
   if (!role) return null;
+  let response: Response;
   try {
-    const response = await fetch(`${MEDUSA_BACKEND_URL}/admin/users/me`, {
+    response = await fetch(`${MEDUSA_BACKEND_URL}/admin/users/me`, {
       headers: { Authorization: `Bearer ${session.token}` },
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
-    if (!response.ok) return null;
-    const payload = await response.json() as { user?: { email?: string } };
-    if (payload.user?.email?.toLowerCase() !== session.email.toLowerCase()) return null;
-    return { ...session, role };
   } catch {
-    return null;
+    // Medusa being unreachable is not the same fact as this token being
+    // invalid — the local cookie's HMAC signature and expiry (already
+    // checked by valid() above) are the fallback of record here. Treating
+    // a network error the same as an explicit rejection silently bounces
+    // every employee to /employee/login during an outage, masking each
+    // page's own dataError/recovery UI behind what looks like "you got
+    // logged out" instead of "Medusa is down."
+    return { ...session, role };
   }
+  if (!response.ok) return null;
+  const payload = await response.json() as { user?: { email?: string } };
+  if (payload.user?.email?.toLowerCase() !== session.email.toLowerCase()) return null;
+  return { ...session, role };
 });
 
 export async function getCustomerSession() {

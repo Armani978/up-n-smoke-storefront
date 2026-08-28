@@ -312,6 +312,11 @@ button { cursor: pointer; }
 .address-list article { border: 1px solid var(--line); border-radius: 14px; padding: 17px; }
 .address-list b, .address-list span { display: block; }
 .address-list span { font-size: 11px; line-height: 1.5; margin-top: 8px; color: #666; }
+.address-actions { display: flex; gap: 14px; margin-top: 12px; }
+.address-actions button { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--olive); }
+.address-actions button:last-child { color: #b92116; }
+.address-actions svg { width: 13px; }
+.address-list > .address-form { grid-column: 1/-1; margin-top: 0; border-top: none; padding-top: 0; }
 .address-form { margin-top: 25px; border-top: 1px solid var(--line); padding-top: 25px; }
 .address-form > div:last-child { display: flex; gap: 10px; margin-top: 18px; }
 .order-list { margin-top: 50px; border-top: 1px solid var(--ink); }

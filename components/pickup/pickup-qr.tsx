@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { pickupQrPayload } from "@/lib/pickup/qr";
 
 export function PickupQr({ token, large = false }: { token: string; large?: boolean }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
     let live = true;
-    void import("qrcode").then(({ toDataURL }) => toDataURL(`UNS-PICKUP:1:${token}`, {
+    void import("qrcode").then(({ toDataURL }) => toDataURL(pickupQrPayload(token), {
       width: large ? 720 : 420,
       margin: 4,
       errorCorrectionLevel: "M",

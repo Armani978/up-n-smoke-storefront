@@ -52,3 +52,46 @@ export async function addCustomerAddress(session: CustomerSession, input: Record
     body: JSON.stringify(input),
   });
 }
+
+// Preserves the response status (unlike customerFetch, which collapses any
+// non-OK response to null) so callers can distinguish "not found / not
+// yours" (404 — Medusa scopes every address lookup to the authenticated
+// customer's own id, so this is also how a cross-customer edit/delete
+// attempt is rejected) from a genuine upstream failure.
+async function customerMutate<T>(session: CustomerSession, path: string, init: RequestInit) {
+  try {
+    const response = await fetch(`${MEDUSA_BACKEND_URL}${path}`, {
+      ...init,
+      headers: storeHeaders({ Authorization: `Bearer ${session.token}`, ...(init.headers ?? {}) }),
+      cache: "no-store",
+    });
+    const body = await response.json().catch(() => null) as T | null;
+    return { status: response.status, body };
+  } catch {
+    return { status: 0, body: null as T | null };
+  }
+}
+
+// Medusa's Store API uses POST for these updates, not PATCH — confirmed
+// against the actual route handlers (medusa-backend/node_modules/@medusajs/
+// medusa/dist/api/store/customers/me/route.js and .../addresses/[address_id]
+// /route.js), not assumed from REST convention.
+export function updateCustomerProfile(session: CustomerSession, input: Record<string, string>) {
+  return customerMutate<{ customer: CustomerProfile }>(session, "/store/customers/me", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateCustomerAddress(session: CustomerSession, addressId: string, input: Record<string, string>) {
+  return customerMutate<{ customer: CustomerProfile }>(session, `/store/customers/me/addresses/${addressId}`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteCustomerAddress(session: CustomerSession, addressId: string) {
+  return customerMutate<{ id: string; deleted: boolean }>(session, `/store/customers/me/addresses/${addressId}`, {
+    method: "DELETE",
+  });
+}

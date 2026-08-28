@@ -118,8 +118,8 @@ export async function listAdminOrders(session: EmployeeSession, strict = false):
   });
 }
 
-export async function listAdminCustomers(session: EmployeeSession) {
-  const result = await adminFetch<{ customers: Array<Record<string, unknown>> }>(session, "/admin/customers?limit=100&fields=*orders");
+export async function listAdminCustomers(session: EmployeeSession, strict = false) {
+  const result = await adminFetch<{ customers: Array<Record<string, unknown>> }>(session, "/admin/customers?limit=100&fields=*orders", undefined, strict);
   return result?.customers ?? [];
 }
 
