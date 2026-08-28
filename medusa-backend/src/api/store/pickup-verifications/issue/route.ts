@@ -2,11 +2,20 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { createPickupCode, hashPickupToken } from "../../../../modules/pickup-verification/token"
 import { orderById, pickupService, publicOrder, requiresAgeVerification } from "../../../pickup-verification-helpers"
 
-type Body = { order_id?: string; email?: string }
+type Body = { order_id?: string; email?: string; regenerate?: boolean }
 
 export async function POST(req: MedusaRequest<Body>, res: MedusaResponse) {
   const orderId = String(req.body?.order_id || "")
   const email = String(req.body?.email || "").trim().toLowerCase()
+  // Defaults to true so the checkout-confirmation issuance flow (the only
+  // caller that omits this field) keeps its existing behavior: always
+  // produce a displayable token. Passive views (the customer's order page,
+  // reloaded or revisited) must pass `regenerate: false` explicitly, since
+  // this route's own on-disk model never stores the plaintext token — once
+  // rotated, the previous code is permanently undisplayable, so a call that
+  // isn't an explicit "give me a working code" request must not rotate a
+  // still-valid one out from under the customer.
+  const regenerate = req.body?.regenerate !== false
   if (!orderId || !email) return void res.status(400).json({ message: "Order and email are required." })
 
   const order = await orderById(req, orderId)
@@ -21,6 +30,11 @@ export async function POST(req: MedusaRequest<Body>, res: MedusaResponse) {
   }
   if (["cancelled", "canceled"].includes(String(order.status)) || String(order.metadata?.pickup_status) === "cancelled") {
     return void res.status(409).json({ message: "This pickup was canceled." })
+  }
+
+  const stillActive = existing?.status === "active" && existing.token_expires_at && new Date(existing.token_expires_at) > new Date()
+  if (stillActive && !regenerate) {
+    return void res.json({ alreadyIssued: true, ...publicOrder(order, existing) })
   }
 
   const token = createPickupCode()

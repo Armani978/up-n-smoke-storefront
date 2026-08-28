@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { CustomerSession } from "@/lib/auth/session";
-import type { EmployeeSession, PickupPassData, PickupVerificationData } from "@/lib/types";
+import type { EmployeeSession, PickupAlreadyIssuedData, PickupPassData, PickupVerificationData } from "@/lib/types";
 import { MEDUSA_BACKEND_URL, storeHeaders } from "@/lib/medusa/config";
 
 export class MedusaPickupError extends Error {
@@ -17,11 +17,11 @@ async function request<T>(path: string, init: RequestInit) {
   return payload as T;
 }
 
-export function issuePickupPass(orderId: string, email: string, session?: CustomerSession) {
-  return request<PickupPassData>("/store/pickup-verifications/issue", {
+export function issuePickupPass(orderId: string, email: string, session?: CustomerSession, regenerate = true) {
+  return request<PickupPassData | PickupAlreadyIssuedData>("/store/pickup-verifications/issue", {
     method: "POST",
     headers: storeHeaders(session ? { Authorization: `Bearer ${session.token}` } : undefined),
-    body: JSON.stringify({ order_id: orderId, email }),
+    body: JSON.stringify({ order_id: orderId, email, regenerate }),
   });
 }
 

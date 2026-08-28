@@ -134,3 +134,7 @@ export type PickupPassData = PickupVerificationData & {
   token: string;
   expiresAt: string;
 };
+
+export type PickupAlreadyIssuedData = PickupVerificationData & {
+  alreadyIssued: true;
+};
