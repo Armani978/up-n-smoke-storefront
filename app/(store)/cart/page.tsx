@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, LoaderCircle, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { ArrowRight, LoaderCircle, Minus, Plus, RefreshCw, ShoppingBag, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/components/storefront/cart-provider";
 import { ProductImage } from "@/components/storefront/product-image";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/utils";
 
 export default function CartPage() {
-  const { lines, subtotal, update, busy, ready } = useCart();
+  const { lines, subtotal, update, busy, ready, loadError, refresh } = useCart();
   const tax = 0;
 
   return (
@@ -16,6 +16,8 @@ export default function CartPage() {
       <header className="page-banner compact"><span className="eyebrow">Reserved for you</span><h1>YOUR<br /><em>BAG.</em></h1></header>
       {!ready ? (
         <section className="empty-cart" aria-live="polite"><LoaderCircle className="spin" /><h2>LOADING YOUR BAG.</h2></section>
+      ) : loadError ? (
+        <section className="empty-cart" role="alert"><h2>COULDN&apos;T LOAD YOUR BAG.</h2><p>{loadError}</p><Button variant="outline" onClick={() => void refresh()}><RefreshCw /> Try again</Button></section>
       ) : !lines.length ? (
         <section className="empty-cart"><ShoppingBag /><h2>THE BAG IS QUIET.</h2><p>Add something live from the wall and it will show up here.</p><Button asChild><Link href="/menu">Shop the live menu</Link></Button></section>
       ) : (

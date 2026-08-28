@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { getMedusaClient } from "@/lib/medusa/client";
+import { resolveProductImage } from "@/lib/product-images";
 import type { CartLine, StoreProduct } from "@/lib/types";
 
 const CART_KEY = "uns-medusa-cart-id";
@@ -24,6 +25,11 @@ type CartContextValue = {
    * before deciding — otherwise a fresh page load's still-empty initial
    * state looks indistinguishable from a genuinely empty cart. */
   ready: boolean;
+  /** Set when the mount-time cart load genuinely failed (network error,
+   * Medusa 5xx, region/cart creation failure) — distinct from a cart that
+   * loaded successfully and is simply empty. Cleared on the next
+   * successful refresh. */
+  loadError: string | null;
   add: (product: StoreProduct, quantity?: number) => Promise<void>;
   update: (lineId: string, quantity: number) => Promise<void>;
   completePickup: (details: PickupDetails) => Promise<{ id: string; displayId: string }>;
@@ -36,24 +42,42 @@ export function CartProvider({ children, catalog }: { children: React.ReactNode;
   const [lines, setLines] = useState<CartLine[]>([]);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const mapCart = useCallback(
     (cart: Record<string, unknown>) => {
       const items = (cart.items ?? []) as Array<Record<string, unknown>>;
-      const byVariant = new Map(catalog.map((product) => [product.variantId, product]));
+      // The Store API snapshots product_title, variant_sku, thumbnail and
+      // unit_price directly on each line item at add-time — always correct,
+      // regardless of variant selected. Reading those fields (rather than
+      // re-deriving title/price from the `catalog` prop) is required for
+      // correctness: `catalog` is fetched once server-side with a 60s ISR
+      // cache, so a variant added moments after that snapshot was taken
+      // would otherwise resolve to nothing and be silently dropped from
+      // the bag. The catalog is kept only as a richer-image lookup, since
+      // line items only carry a bare `thumbnail`.
+      const catalogImages = new Map<string, string>();
+      for (const product of catalog) {
+        if (product.variants && product.variants.length > 1) {
+          for (const variant of product.variants) catalogImages.set(variant.id, product.image);
+        } else if (product.variantId) {
+          catalogImages.set(product.variantId, product.image);
+        }
+      }
       setLines(
-        items.flatMap((item) => {
-          const product = byVariant.get(String(item.variant_id));
-          if (!product) return [];
-          return [{
+        items.map((item) => {
+          const variantId = String(item.variant_id);
+          const thumbnail = (item.thumbnail as string | null | undefined) ?? null;
+          const sku = String(item.variant_sku ?? "");
+          return {
             id: String(item.id),
-            variantId: product.variantId,
-            productId: product.id,
-            title: product.name,
-            image: product.image,
-            price: product.price,
+            variantId,
+            productId: String(item.product_id),
+            title: String(item.product_title ?? "Pickup item"),
+            image: catalogImages.get(variantId) ?? resolveProductImage(thumbnail, sku),
+            price: Number(item.unit_price ?? 0),
             quantity: Number(item.quantity),
-          }];
+          };
         }),
       );
     },
@@ -86,8 +110,15 @@ export function CartProvider({ children, catalog }: { children: React.ReactNode;
     }
     try {
       mapCart((await getOrCreateCart()) as unknown as Record<string, unknown>);
-    } catch {
+      setLoadError(null);
+    } catch (error) {
+      // getOrCreateCart() already recovers internally from a stale stored
+      // cart id (removes it, creates a fresh cart) without throwing — a
+      // throw here means something genuinely failed (region lookup, cart
+      // creation, a network/5xx error), not "the cart is empty." Surface
+      // it distinguishably rather than silently rendering as an empty cart.
       setLines([]);
+      setLoadError(error instanceof Error ? error.message : "Unable to load your pickup bag.");
     } finally {
       setReady(true);
     }
@@ -184,11 +215,12 @@ export function CartProvider({ children, catalog }: { children: React.ReactNode;
     subtotal: lines.reduce((sum, line) => sum + line.price * line.quantity, 0),
     busy,
     ready,
+    loadError,
     add,
     update,
     completePickup,
     refresh,
-  }), [lines, busy, ready, add, update, completePickup, refresh]);
+  }), [lines, busy, ready, loadError, add, update, completePickup, refresh]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

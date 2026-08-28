@@ -35,7 +35,7 @@ async function fetchPickupPass(orderId: string, email: string) {
 }
 
 export default function CheckoutPage() {
-  const { lines, subtotal, completePickup, busy, ready } = useCart();
+  const { lines, subtotal, completePickup, busy, ready, loadError, refresh } = useCart();
   const [complete, setComplete] = useState<CheckoutCompletion | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -43,8 +43,8 @@ export default function CheckoutPage() {
   const total = subtotal;
 
   useEffect(() => {
-    if (ready && !lines.length && !complete && !submitting) router.replace("/cart");
-  }, [complete, lines.length, ready, router, submitting]);
+    if (ready && !loadError && !lines.length && !complete && !submitting) router.replace("/cart");
+  }, [complete, lines.length, loadError, ready, router, submitting]);
 
   async function loadPass(orderId: string, email: string) {
     setComplete((current) => current ? { ...current, passLoading: true, passError: undefined } : current);
@@ -90,6 +90,9 @@ export default function CheckoutPage() {
     }
     if (!ready) {
       return <main className="checkout-pass-loading" aria-live="polite"><LoaderCircle className="spin" /><span>ONE SECOND</span><h1>LOADING<br /><em>YOUR BAG.</em></h1></main>;
+    }
+    if (loadError) {
+      return <main className="checkout-pass-loading" aria-live="polite" role="alert"><span>COULDN&apos;T LOAD YOUR BAG</span><h1>SOMETHING<br /><em>WENT WRONG.</em></h1><p>{loadError}</p><Button variant="outline" onClick={() => void refresh()}><RefreshCw /> Try again</Button></main>;
     }
     return null;
   }
