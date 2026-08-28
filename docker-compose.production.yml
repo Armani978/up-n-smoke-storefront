@@ -82,7 +82,7 @@ services:
       args:
         MEDUSA_BACKEND_URL: http://backend:9000
         NEXT_PUBLIC_MEDUSA_BACKEND_URL: /medusa
-        NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:-}
+        NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:?NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY must be set — the storefront cannot reach the Store API without it}
         NEXT_PUBLIC_SITE_URL: https://upnsmokevapors.com
     restart: unless-stopped
     environment:
@@ -91,7 +91,7 @@ services:
       HOSTNAME: 0.0.0.0
       MEDUSA_BACKEND_URL: http://backend:9000
       NEXT_PUBLIC_MEDUSA_BACKEND_URL: /medusa
-      NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:-}
+      NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:?NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY must be set — the storefront cannot reach the Store API without it}
       NEXT_PUBLIC_SITE_URL: https://upnsmokevapors.com
       AUTH_SECRET: ${AUTH_SECRET}
       EMPLOYEE_ADMIN_EMAILS: ${EMPLOYEE_ADMIN_EMAILS:-}

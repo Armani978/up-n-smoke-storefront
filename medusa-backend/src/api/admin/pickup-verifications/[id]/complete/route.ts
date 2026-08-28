@@ -38,7 +38,16 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
       if (["cancelled", "canceled"].includes(String(order.status)) || pickupStatus(order) === "cancelled") {
         throw Object.assign(new Error("Canceled orders cannot be completed."), { status: 409 })
       }
-      if (!["ready", "arrived"].includes(pickupStatus(order))) {
+      // "completed" is admitted here too: by this point verification.status is
+      // guaranteed "active" or "processing" (line 36 already returned early for
+      // a genuinely completed verification, and canAttemptPickupCompletion above
+      // only admits those two). The only way to reach here with the order's own
+      // pickup_status already "completed" is a retry recovering from a crash
+      // between the order-metadata write (step 4) and verification finalization
+      // (step 5) -- the order/inventory truth is already correct, only the
+      // compliance record needs finalizing. Without this, that crash window is
+      // permanently unrecoverable through any supported route.
+      if (!["ready", "arrived", "completed"].includes(pickupStatus(order))) {
         throw Object.assign(new Error("Only ready orders can be completed."), { status: 409 })
       }
       const checklist = req.body?.checklist || {}
@@ -82,16 +91,24 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
           })
         }
         const actorId = req.auth_context?.actor_id || "employee"
-        const latestOrder = await orderById(req, order.id)
-        const completedMetadata = {
-          ...(latestOrder?.metadata || order.metadata || {}),
-          pickup_status: "completed",
-          pickup_completed_at: new Date().toISOString(),
-          pickup_completed_by: actorId,
+        // A retry recovering from the post-step-4 crash window above already
+        // has this metadata persisted from the original attempt -- re-writing
+        // it here would overwrite the real completion timestamp/actor with
+        // this retry's, which is wrong for a compliance-sensitive record.
+        // Only write it the first time through.
+        let completedMetadata = order.metadata || {}
+        if (pickupStatus(order) !== "completed") {
+          const latestOrder = await orderById(req, order.id)
+          completedMetadata = {
+            ...(latestOrder?.metadata || order.metadata || {}),
+            pickup_status: "completed",
+            pickup_completed_at: new Date().toISOString(),
+            pickup_completed_by: actorId,
+          }
+          await updateOrderWorkflow(req.scope).run({
+            input: { id: order.id, user_id: actorId, metadata: completedMetadata },
+          })
         }
-        await updateOrderWorkflow(req.scope).run({
-          input: { id: order.id, user_id: actorId, metadata: completedMetadata },
-        })
         const completed = await service.updatePickupVerifications({
           id: verification.id,
           status: "completed",

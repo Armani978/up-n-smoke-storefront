@@ -46,13 +46,23 @@ export async function POST(req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
     return void res.status(409).json({ message: "This order was canceled." })
   }
   if (!["ready", "arrived"].includes(pickupStatus(order))) {
-    if (!["pending", "accepted", "preparing"].includes(pickupStatus(order))) {
+    if (pickupStatus(order) === "completed") {
+      // Order metadata says completed but this verification (the compliance
+      // record) never got finalized -- a crash in /complete between the
+      // order-metadata write and verification finalization. verification.status
+      // is guaranteed active/processing at this point (checked above, "completed"
+      // already returned 410), so letting the employee back in here can't
+      // reopen a genuinely-finished handoff; it lets /complete's own retry
+      // logic repair the stranded compliance record instead of leaving it
+      // permanently unreachable through the normal scan/resolve flow.
+    } else if (["pending", "accepted", "preparing"].includes(pickupStatus(order))) {
+      const orderService = req.scope.resolve(Modules.ORDER) as IOrderModuleService
+      const metadata = { ...(order.metadata || {}), pickup_status: "arrived" }
+      await orderService.updateOrders([{ id: order.id, metadata }])
+      order = { ...order, metadata }
+    } else {
       return void res.status(409).json({ message: "This order cannot be opened for pickup." })
     }
-    const orderService = req.scope.resolve(Modules.ORDER) as IOrderModuleService
-    const metadata = { ...(order.metadata || {}), pickup_status: "arrived" }
-    await orderService.updateOrders([{ id: order.id, metadata }])
-    order = { ...order, metadata }
   }
 
   await audit(service, verification, "order_opened_for_verification", employeeId)

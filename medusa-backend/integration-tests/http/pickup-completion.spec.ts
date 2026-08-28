@@ -1,6 +1,7 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules, ProductStatus } from "@medusajs/framework/utils"
 import {
+  completeOrderWorkflow,
   createApiKeysWorkflow,
   createInventoryLevelsWorkflow,
   createLocationFulfillmentSetWorkflow,
@@ -16,6 +17,7 @@ import {
   linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
   markOrderFulfillmentAsDeliveredWorkflow,
+  updateOrderWorkflow,
 } from "@medusajs/medusa/core-flows"
 
 jest.setTimeout(180000)
@@ -229,6 +231,35 @@ medusaIntegrationTestRunner({
         expect(afterDuplicate.fulfillmentCount).toBe(1)
       })
 
+      // Genuine concurrency, not sequential: two completion requests fired via
+      // Promise.all, not two awaited one after another. The per-verification
+      // lock in the route must serialize them so the loser observes the
+      // already-completed state and returns the idempotent branch, rather
+      // than a race producing a double fulfillment/decrement.
+      it("serializes two truly concurrent completion requests to exactly one fulfillment/decrement", async () => {
+        const order = await createFreshOrder([{ variantId: gadgetVariantId, quantity: 1 }], "customer.e@upnsmoke.local")
+        const verificationId = await resolveAndVerify(String(order.display_id))
+
+        const [first, second] = await Promise.all([
+          api.post(`/admin/pickup-verifications/${verificationId}/complete`, { checklist: fullChecklist }, { headers: adminHeaders() }),
+          api.post(`/admin/pickup-verifications/${verificationId}/complete`, { checklist: fullChecklist }, { headers: adminHeaders() }),
+        ])
+        const results = [first.data, second.data]
+        expect(results.filter((r: any) => r.alreadyCompleted).length).toBe(1)
+        expect(results.filter((r: any) => !r.alreadyCompleted).length).toBe(1)
+
+        const after = await currentOrderState(getContainer().resolve(ContainerRegistrationKeys.PG_CONNECTION), order.id)
+        expect(after.order.status).toBe("completed")
+        expect(after.fulfillmentCount).toBe(1)
+        expect(after.activeReservations.length).toBe(0)
+
+        const [verification] = await getContainer().resolve(ContainerRegistrationKeys.PG_CONNECTION)("pickup_verification").where({ id: verificationId }).select("status")
+        expect(verification.status).toBe("completed")
+
+        const auditEvents = await getContainer().resolve(ContainerRegistrationKeys.PG_CONNECTION)("pickup_audit_event").where({ verification_id: verificationId, event_type: "pickup_completed" })
+        expect(auditEvents.length).toBe(1)
+      })
+
       // Regression coverage for the confirmed defect: a pre-existing fulfillment
       // covering only one of two items must not let the order complete with the
       // second item unfulfilled and its inventory reservation stranded.
@@ -282,6 +313,76 @@ medusaIntegrationTestRunner({
         expect(after.order.status).toBe("completed")
         expect(after.items.every((item: any) => item.fulfilled_quantity === item.quantity && item.delivered_quantity === item.quantity)).toBe(true)
         expect(after.activeReservations.length).toBe(0)
+      })
+
+      // Regression coverage for the Sprint 04 lifecycle-recovery finding
+      // (Opus's read-only workstream, sprint-04/lifecycle-recovery-evidence):
+      // a crash between the order-metadata write (step 4) and verification
+      // finalization (step 5) left the pickup_verification row permanently
+      // stuck "active" with no completed_at/completed_by/audit event, and no
+      // supported route could ever repair it. This plants that exact
+      // post-step-4 state directly (bypassing the route, the only way to
+      // reach the crash window without actually crashing mid-request) and
+      // asserts a retry through the real route repairs it.
+      it("recovers a verification stranded active after the order was already completed (post-step-4 crash)", async () => {
+        const order = await createFreshOrder([{ variantId: widgetVariantId, quantity: 1 }], "customer.f@upnsmoke.local")
+        const container = getContainer()
+        const verificationId = await resolveAndVerify(String(order.display_id))
+        const { data: orderDetail } = await api.get(`/admin/orders/${order.id}?fields=items.id`, { headers: adminHeaders() })
+        const item = orderDetail.order.items[0]
+
+        // Replay steps 1-4 out of band, exactly what the route itself does,
+        // then stop -- leaving verification.status at "active" as if the
+        // process died right after this point.
+        const { result: fulfillment } = await createOrderFulfillmentWorkflow(container).run({
+          input: { order_id: order.id, items: [{ id: item.id, quantity: 1 }], no_notification: false },
+        })
+        await markOrderFulfillmentAsDeliveredWorkflow(container).run({
+          input: { orderId: order.id, fulfillmentId: fulfillment.id, no_notification: false },
+        })
+        await completeOrderWorkflow(container).run({ input: { orderIds: [order.id] } })
+        const plantedCompletedAt = "2020-01-01T00:00:00.000Z"
+        await updateOrderWorkflow(container).run({
+          input: {
+            id: order.id,
+            user_id: "harness",
+            metadata: { pickup_status: "completed", pickup_completed_at: plantedCompletedAt, pickup_completed_by: "harness" },
+          },
+        })
+
+        const stranded = await currentOrderState(container.resolve(ContainerRegistrationKeys.PG_CONNECTION), order.id)
+        expect(stranded.order.status).toBe("completed")
+        expect(stranded.order.metadata.pickup_status).toBe("completed")
+        const [strandedVerification] = await container.resolve(ContainerRegistrationKeys.PG_CONNECTION)("pickup_verification").where({ id: verificationId }).select("status", "completed_at")
+        expect(strandedVerification.status).toBe("active")
+        expect(strandedVerification.completed_at).toBeNull()
+
+        // The employee's normal re-scan path must also let them back in —
+        // not just direct API access to the verification id.
+        const rescan = await api.post("/admin/pickup-verifications/resolve", { order_number: String(order.display_id) }, { headers: adminHeaders() })
+        expect(rescan.status).toBe(200)
+        expect(rescan.data.verificationId).toBe(verificationId)
+
+        const response = await api.post(`/admin/pickup-verifications/${verificationId}/complete`, { checklist: fullChecklist }, { headers: adminHeaders() })
+        expect(response.status).toBe(200)
+        expect(response.data.status).toBe("completed")
+
+        const after = await currentOrderState(container.resolve(ContainerRegistrationKeys.PG_CONNECTION), order.id)
+        expect(after.fulfillmentCount).toBe(1)
+        expect(after.items.every((i: any) => i.fulfilled_quantity === i.quantity && i.delivered_quantity === i.quantity)).toBe(true)
+        expect(after.activeReservations.length).toBe(0)
+        // The retry must not overwrite the original completion timestamp/actor
+        // with its own -- that would falsify the compliance record's history.
+        expect(after.order.metadata.pickup_completed_at).toBe(plantedCompletedAt)
+        expect(after.order.metadata.pickup_completed_by).toBe("harness")
+
+        const [verification] = await container.resolve(ContainerRegistrationKeys.PG_CONNECTION)("pickup_verification").where({ id: verificationId }).select("status", "completed_by", "completed_at")
+        expect(verification.status).toBe("completed")
+        expect(verification.completed_at).not.toBeNull()
+        expect(verification.completed_by).not.toBeNull()
+
+        const auditEvents = await container.resolve(ContainerRegistrationKeys.PG_CONNECTION)("pickup_audit_event").where({ verification_id: verificationId, event_type: "pickup_completed" })
+        expect(auditEvents.length).toBe(1)
       })
 
       it("rejects completion with zero database delta when the checklist is incomplete", async () => {
