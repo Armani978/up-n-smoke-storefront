@@ -27,6 +27,15 @@ function requireProductionSecret(name: string, value: string | undefined) {
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    // The production database is the non-TLS Postgres service on Compose's
+    // private network. Medusa 2.16 otherwise classifies the `postgres` host as
+    // remote, forces SSL for module migrations, and can hang indefinitely at
+    // "Running migrations..." instead of surfacing the SSL mismatch.
+    databaseDriverOptions: {
+      connection: {
+        ssl: false,
+      },
+    },
     // Redis is optional for local development. Only enable it when a reachable
     // instance has explicitly been configured; an unavailable Redis server
     // causes authenticated Admin requests to fail while login appears to hang.
