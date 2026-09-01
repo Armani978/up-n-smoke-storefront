@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Boxes, ClipboardList, LogOut, Megaphone, Menu, PackageCheck, ScanBarcode, Settings, Store, Users, X } from "lucide-react";
+import { BarChart3, Boxes, ClipboardList, FilePenLine, LogOut, Megaphone, Menu, PackageCheck, ScanBarcode, Settings, Store, Users, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -15,6 +15,7 @@ const nav = [
   { href: "/employee/sales", label: "Orders & sales", icon: ClipboardList },
   { href: "/employee/customers", label: "Customers", icon: Users },
   { href: "/employee/promotions", label: "Promotions", icon: Megaphone },
+  { href: "/employee/content", label: "Page content", icon: FilePenLine },
   { href: "/employee/settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -25,7 +26,7 @@ export function EmployeeShell({ children, email, role }: { children: React.React
   const menuButton = useRef<HTMLButtonElement>(null);
   const sidebar = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const links = nav.filter((item) => !(["/employee/customers", "/employee/promotions", "/employee/settings"].includes(item.href) && role === "employee"));
+  const links = nav.filter((item) => !(["/employee/customers", "/employee/promotions", "/employee/content", "/employee/settings"].includes(item.href) && role === "employee"));
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 980px)");

@@ -1,5 +1,8 @@
+"use client";
+
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { StoreProduct } from "@/lib/types";
 import type { StorefrontPromo } from "@/lib/promo";
 
@@ -7,16 +10,24 @@ function safeHref(href: string) {
   return href.startsWith("/") || href.startsWith("https://") ? href : "/menu";
 }
 
-export function PromoLanding({ promo, catalog }: { promo: StorefrontPromo; catalog: StoreProduct[] }) {
+export function PromoLanding({ promos, catalog }: { promos: StorefrontPromo[]; catalog: StoreProduct[] }) {
+  const [selected, setSelected] = useState(0);
+  useEffect(() => {
+    if (promos.length < 2) return;
+    const rotation = window.setInterval(() => setSelected((current) => (current + 1) % promos.length), 8000);
+    return () => window.clearInterval(rotation);
+  }, [promos.length]);
+  const promo = promos[selected] ?? promos[0];
+  if (!promo) return null;
   const productByHandle = new Map(catalog.map((product) => [product.handle, product]));
-  const featured = promo.products.map((selection) => {
+  const featured = promo.products.flatMap((selection) => {
     const catalogProduct = selection.handle ? productByHandle.get(selection.handle) : undefined;
-    return {
-      handle: catalogProduct?.handle || selection.handle,
-      label: catalogProduct?.name || selection.label,
-      imageUrl: catalogProduct?.image || selection.imageUrl,
-      stock: catalogProduct?.stock,
-    };
+    return catalogProduct ? [{
+      handle: catalogProduct.handle,
+      label: catalogProduct.name,
+      imageUrl: catalogProduct.image,
+      stock: catalogProduct.stock,
+    }] : [];
   });
 
   return (
@@ -36,6 +47,10 @@ export function PromoLanding({ promo, catalog }: { promo: StorefrontPromo; catal
           <img src={promo.heroImageUrl} alt="Official Geek Bar Pulse X 2 product campaign" />
         </div>
       </section>
+
+      {promos.length > 1 && <div className="promo-rotation" aria-label="Homepage promotions">
+        {promos.map((item, index) => <button key={item.key} type="button" className={index === selected ? "active" : ""} onClick={() => setSelected(index)} aria-label={`Show ${item.campaignName}`} aria-current={index === selected ? "true" : undefined}>{index + 1}</button>)}
+      </div>}
 
       {featured.length > 0 && (
         <section className="promo-products" aria-labelledby="promo-products-title">

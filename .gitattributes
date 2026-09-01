@@ -1,0 +1,5 @@
+# Shell scripts run inside Linux containers. A CRLF checkout makes the kernel
+# fail to find their interpreter, which previously left the backend container
+# in a restart loop after a deploy from Windows.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf

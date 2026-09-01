@@ -1,5 +1,4 @@
 import { model } from "@medusajs/framework/utils"
-import PickupAuditEvent from "./pickup-audit-event"
 
 const PickupVerification = model.define("pickup_verification", {
   id: model.id().primaryKey(),
@@ -12,7 +11,6 @@ const PickupVerification = model.define("pickup_verification", {
   verification_method: model.enum(["manual_dob", "id_scan", "visual_check"]).nullable(),
   completed_at: model.dateTime().nullable(),
   completed_by: model.text().nullable(),
-  audit_events: model.hasMany(() => PickupAuditEvent, { mappedBy: "verification" }),
 })
 
 export default PickupVerification

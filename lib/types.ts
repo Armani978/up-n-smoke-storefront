@@ -59,6 +59,14 @@ export type AdminProduct = StoreProduct & {
   inventoryLocationId?: string;
 };
 
+export type ProductImageSearchResult = {
+  id: string;
+  imageUrl: string;
+  source: string;
+  sourceUrl: string;
+  title: string;
+};
+
 export type AdminOrderLine = {
   id: string;
   title: string;

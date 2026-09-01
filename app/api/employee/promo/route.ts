@@ -7,8 +7,9 @@ import { DEFAULT_STOREFRONT_PROMO, normalizeStorefrontPromo } from "@/lib/promo"
 export async function GET() {
   const access = await employeeApiAccess("promos.write");
   if ("response" in access) return access.response;
-  const result = await adminFetch<{ promo?: unknown }>(access.session, "/admin/storefront-promo");
-  return NextResponse.json({ promo: result?.promo ? normalizeStorefrontPromo(result.promo) : DEFAULT_STOREFRONT_PROMO });
+  const result = await adminFetch<{ promos?: unknown[] }>(access.session, "/admin/storefront-promo");
+  const promos = Array.isArray(result?.promos) ? result.promos.map(normalizeStorefrontPromo) : [DEFAULT_STOREFRONT_PROMO];
+  return NextResponse.json({ promos });
 }
 
 export async function PUT(request: Request) {

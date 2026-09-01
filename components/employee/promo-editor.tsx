@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, LoaderCircle, RotateCcw, Save } from "lucide-react";
+import { CheckCircle2, LoaderCircle, Plus, RotateCcw, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { StorefrontPromo } from "@/lib/promo";
 import type { AdminProduct } from "@/lib/types";
@@ -15,6 +15,8 @@ export function PromoEditor() {
   const [saved, setSaved] = useState<StorefrontPromo | null>(null);
   const [draft, setDraft] = useState<StorefrontPromo | null>(null);
   const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [promos, setPromos] = useState<StorefrontPromo[]>([]);
+  const [selectedKey, setSelectedKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -27,11 +29,16 @@ export function PromoEditor() {
       fetch("/api/employee/products", { cache: "no-store" }),
     ]).then(async ([promoResponse, productsResponse]) => {
       if (!promoResponse.ok || !productsResponse.ok) throw new Error("Promo Studio could not load live storefront data.");
-      const promoPayload = await promoResponse.json() as { promo: StorefrontPromo };
+      const promoPayload = await promoResponse.json() as { promos?: StorefrontPromo[] };
       const productsPayload = await productsResponse.json() as { products: AdminProduct[] };
       if (!active) return;
-      setSaved(clonePromo(promoPayload.promo));
-      setDraft(clonePromo(promoPayload.promo));
+      const campaigns = (promoPayload.promos ?? []).map(clonePromo);
+      const initial = campaigns[0];
+      if (!initial) throw new Error("Promo Studio could not load a campaign.");
+      setPromos(campaigns);
+      setSelectedKey(initial.key);
+      setSaved(clonePromo(initial));
+      setDraft(clonePromo(initial));
       setProducts(productsPayload.products.filter((product) => product.status === "published"));
     }).catch((reason) => {
       if (active) setError(reason instanceof Error ? reason.message : "Promo Studio could not load.");
@@ -60,6 +67,22 @@ export function PromoEditor() {
     setSuccess(false);
   }
 
+  function selectCampaign(key: string) {
+    const campaign = promos.find((item) => item.key === key);
+    if (!campaign) return;
+    setSelectedKey(key);
+    setSaved(clonePromo(campaign));
+    setDraft(clonePromo(campaign));
+    setError(""); setSuccess(false);
+  }
+
+  function addCampaign() {
+    if (promos.length >= 8) return;
+    const campaign: StorefrontPromo = { ...clonePromo(saved!), key: `promo-${Date.now().toString(36)}`, active: false, campaignName: "New campaign" };
+    setPromos((current) => [...current, campaign]);
+    setSelectedKey(campaign.key); setSaved(clonePromo(campaign)); setDraft(clonePromo(campaign)); setError(""); setSuccess(false);
+  }
+
   async function save() {
     if (!draft) return;
     setSaving(true);
@@ -75,6 +98,7 @@ export function PromoEditor() {
       if (!response.ok || !payload.promo) throw new Error(payload.error || "The promo could not be saved.");
       setSaved(clonePromo(payload.promo));
       setDraft(clonePromo(payload.promo));
+      setPromos((current) => current.map((campaign) => campaign.key === payload.promo!.key ? clonePromo(payload.promo!) : campaign));
       setSuccess(true);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The promo could not be saved.");
@@ -90,15 +114,19 @@ export function PromoEditor() {
     <div className="ops-page promo-studio-page">
       <header className="ops-heading promo-studio-heading">
         <div><span>Storefront campaign / manager access</span><h1>PROMO<br /><em>STUDIO.</em></h1></div>
-        <p>Edit the live homepage campaign.<br />Changes publish after save.</p>
+        <p>Run up to eight homepage campaigns.<br />Active campaigns rotate for customers.</p>
       </header>
 
       {success && <div className="promo-save-banner" role="status"><CheckCircle2 /> Promo updated on the storefront.</div>}
 
       <div className="promo-studio-grid">
         <form className="promo-editor-form" onSubmit={(event) => { event.preventDefault(); void save(); }}>
+          <div className="promo-campaigns" aria-label="Campaign selection">
+            {promos.map((campaign, index) => <button key={campaign.key} type="button" className={campaign.key === selectedKey ? "active" : ""} onClick={() => selectCampaign(campaign.key)}>{index + 1}. {campaign.campaignName}</button>)}
+            <button type="button" onClick={addCampaign} disabled={promos.length >= 8}><Plus /> Add campaign</button>
+          </div>
           <div className="promo-switch-row">
-            <div><strong>Campaign status</strong><small>{draft.active ? "Visible on the storefront" : "Standard homepage is visible"}</small></div>
+            <div><strong>Campaign status</strong><small>{draft.active ? "Included in the storefront rotation" : "Saved but not visible to customers"}</small></div>
             <button className="promo-switch" type="button" role="switch" aria-checked={draft.active} aria-label="Campaign active" onClick={() => update("active", !draft.active)} />
           </div>
 
@@ -119,7 +147,7 @@ export function PromoEditor() {
                 </select>
               ))}
             </div>
-            <small>Select up to two live products. Promo defaults stay in place until matching inventory is selected.</small>
+            <small>Select up to two live products. The storefront shows this rail only when each selection matches live inventory.</small>
           </div>
 
           <div className="promo-field">

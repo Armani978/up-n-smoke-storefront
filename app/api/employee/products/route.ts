@@ -16,7 +16,8 @@ export async function POST(request: Request) {
   const { session } = access;
   const body = await request.json() as Record<string, unknown>;
   const thumbnail = String(body.image ?? "").trim();
-  if (thumbnail && !/^(https:\/\/|\/(?!\/))/i.test(thumbnail)) {
+  const localMediaUrl = process.env.NODE_ENV !== "production" && /^http:\/\/(localhost|127\.0\.0\.1):9000\/static\//i.test(thumbnail);
+  if (thumbnail && !(/^(https:\/\/|\/(?!\/))/i.test(thumbnail) || localMediaUrl)) {
     return NextResponse.json({ error: "Product photo must be an HTTPS URL or a local /product-images path." }, { status: 400 });
   }
   const [profiles, channels] = await Promise.all([
@@ -32,6 +33,10 @@ export async function POST(request: Request) {
       title: body.name,
       description: body.description,
       thumbnail: thumbnail || undefined,
+      metadata: body.imageSource ? {
+        photo_source: String(body.imageSource).slice(0, 120),
+        photo_source_url: String(body.imageSourceUrl ?? "").slice(0, 500) || null,
+      } : undefined,
       status: "published",
       shipping_profile_id: profile.id,
       sales_channels: [{ id: channel.id }],

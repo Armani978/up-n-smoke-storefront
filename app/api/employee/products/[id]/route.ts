@@ -16,10 +16,19 @@ export async function PATCH(request: Request, { params }: Context) {
   if ("description" in body) update.description = String(body.description ?? "");
   if ("image" in body) {
     const thumbnail = String(body.image ?? "").trim();
-    if (thumbnail && !/^(https:\/\/|\/(?!\/))/i.test(thumbnail)) {
+    const localMediaUrl = process.env.NODE_ENV !== "production" && /^http:\/\/(localhost|127\.0\.0\.1):9000\/static\//i.test(thumbnail);
+    if (thumbnail && !(/^(https:\/\/|\/(?!\/))/i.test(thumbnail) || localMediaUrl)) {
       return NextResponse.json({ error: "Product photo must be an HTTPS URL or a local /product-images path." }, { status: 400 });
     }
     update.thumbnail = thumbnail || null;
+  }
+  if (body.imageSource) {
+    const current = await adminFetch<{ product?: { metadata?: Record<string, unknown> } }>(session, `/admin/products/${id}?fields=metadata`);
+    update.metadata = {
+      ...(current?.product?.metadata ?? {}),
+      photo_source: String(body.imageSource).slice(0, 120),
+      photo_source_url: String(body.imageSourceUrl ?? "").slice(0, 500) || null,
+    };
   }
   const requestedStatus = "storefront" in body
     ? (body.storefront ? "published" : "draft")

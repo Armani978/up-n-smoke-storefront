@@ -2,6 +2,7 @@ import type { MedusaRequest } from "@medusajs/framework/http"
 import { STOREFRONT_PROMO_MODULE } from "../modules/storefront-promo"
 
 export const PROMO_KEY = "homepage"
+export const MAX_STOREFRONT_PROMOS = 8
 
 export const DEFAULT_PROMO = {
   key: PROMO_KEY,
@@ -29,6 +30,10 @@ export function promoService(req: MedusaRequest) {
 }
 
 export async function currentPromo(req: MedusaRequest) {
-  const [promo] = await promoService(req).listStorefrontPromos({ key: PROMO_KEY }, { take: 1 })
-  return promo ?? DEFAULT_PROMO
+  return (await currentPromos(req))[0] ?? DEFAULT_PROMO
+}
+
+export async function currentPromos(req: MedusaRequest) {
+  const promos = await promoService(req).listStorefrontPromos({}, { take: MAX_STOREFRONT_PROMOS, order: { updated_at: "DESC" } })
+  return promos.length ? promos : [DEFAULT_PROMO]
 }

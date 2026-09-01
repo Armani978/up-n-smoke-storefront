@@ -6,9 +6,9 @@ import { ProductCard } from "@/components/storefront/product-card";
 import { Button } from "@/components/ui/button";
 import type { StoreProduct } from "@/lib/types";
 
-export function CatalogExplorer({ products }: { products: StoreProduct[] }) {
+export function CatalogExplorer({ products, initialCategory = "All" }: { products: StoreProduct[]; initialCategory?: string }) {
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
+  const [category, setCategory] = useState(initialCategory);
   const [limit, setLimit] = useState(48);
   const categories = ["All", ...new Set(products.map((product) => product.category))];
   const shown = useMemo(() => {

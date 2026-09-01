@@ -42,7 +42,11 @@ function RollingLabel({ children }: { children: string }) {
   );
 }
 
-export function StoreHeader() {
+function categoryHref(category: string) {
+  return `/menu?category=${encodeURIComponent(category)}`;
+}
+
+export function StoreHeader({ categories }: { categories: string[] }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { count } = useCart();
@@ -95,6 +99,12 @@ export function StoreHeader() {
           <div className="header-meta">
             <nav className="header-shortcuts" aria-label="Store shortcuts">
               <Link href="/menu" aria-current={pathname === "/menu" ? "page" : undefined}>Shop</Link>
+              <details className="category-popover">
+                <summary>Categories</summary>
+                <div aria-label="Product categories">
+                  {categories.map((category) => <Link key={category} href={categoryHref(category)}>{category}</Link>)}
+                </div>
+              </details>
               <Link href="/account" aria-current={pathname.startsWith("/account") ? "page" : undefined}>Account</Link>
             </nav>
             <button
@@ -142,6 +152,18 @@ export function StoreHeader() {
               <span className="menu-link-mark" aria-hidden="true">↗</span>
             </Link>
           ))}
+          {categories.length > 0 && (
+            <div className="drawer-categories">
+              <span>Categories</span>
+              <div>
+                {categories.map((category) => (
+                  <Link key={category} href={categoryHref(category)} onClick={() => setOpen(false)}>
+                    {category}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </nav>
         <div className="drawer-foot">
           <p>Reserve online.<br />Roll in.<br />Pick up.</p>

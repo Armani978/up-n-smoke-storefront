@@ -1,11 +1,11 @@
 "use client";
 
-import { Archive, Edit3, Eye, EyeOff, LoaderCircle, PackagePlus, Save, Search, X } from "lucide-react";
+import { Archive, Camera, Edit3, Eye, EyeOff, ImagePlus, LoaderCircle, PackagePlus, Save, Search, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductImage } from "@/components/storefront/product-image";
-import type { AdminProduct } from "@/lib/types";
+import type { AdminProduct, ProductImageSearchResult } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { DataFreshness } from "@/components/employee/data-freshness";
 import { isProductImageFallback } from "@/lib/product-images";
@@ -17,6 +17,8 @@ type ProductForm = {
   price: string;
   status: string;
   image: string;
+  imageSource: string;
+  imageSourceUrl: string;
 };
 const empty: ProductForm = {
   name: "",
@@ -25,7 +27,31 @@ const empty: ProductForm = {
   price: "",
   status: "published",
   image: "",
+  imageSource: "",
+  imageSourceUrl: "",
 };
+
+async function optimizePhoto(file: File) {
+  if (file.size <= 1_500_000) return file;
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const candidate = new Image();
+      candidate.onload = () => resolve(candidate);
+      candidate.onerror = reject;
+      candidate.src = objectUrl;
+    });
+    const scale = Math.min(1, 2000 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(image.naturalWidth * scale);
+    canvas.height = Math.round(image.naturalHeight * scale);
+    canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+    return blob ? new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.jpg`, { type: "image/jpeg" }) : file;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 
 export function InventoryManager({
   initialProducts,
@@ -46,6 +72,9 @@ export function InventoryManager({
   const [stockDraft, setStockDraft] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [visibilityBusy, setVisibilityBusy] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageSearchBusy, setImageSearchBusy] = useState(false);
+  const [imageResults, setImageResults] = useState<ProductImageSearchResult[]>([]);
   const [limit, setLimit] = useState(100);
   const visible = useMemo(() => {
     const q = query.toLowerCase();
@@ -69,14 +98,18 @@ export function InventoryManager({
       image: isProductImageFallback(product.image)
         ? ""
         : product.image,
+      imageSource: "",
+      imageSourceUrl: "",
     });
   };
   const openNew = () => {
     setEditing("new");
     setForm({ ...empty, sku: `UNS-${Date.now().toString().slice(-6)}` });
+    setImageResults([]);
   };
 
   async function saveProduct() {
+    if (uploadingImage) return;
     const isNew = editing === "new";
     const response = await fetch(
       isNew
@@ -95,6 +128,47 @@ export function InventoryManager({
     setMessage("Product saved to Medusa.");
     setEditing(null);
     await refresh();
+  }
+  async function uploadImage(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setMessage("Choose a product photo file.");
+      return;
+    }
+    setUploadingImage(true);
+    setMessage("");
+    try {
+      const optimized = await optimizePhoto(file);
+      const body = new FormData();
+      body.append("image", optimized, optimized.name);
+      const response = await fetch("/api/employee/media/product-image", { method: "POST", body });
+      const payload = await response.json() as { url?: string; source?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error || "Unable to upload the product photo.");
+      setForm((current) => ({ ...current, image: payload.url!, imageSource: payload.source || "staff_upload", imageSourceUrl: "" }));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to upload the product photo.");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+  async function findImages() {
+    if (!editing || editing === "new") {
+      setMessage("Save the product first, then search for verified product imagery.");
+      return;
+    }
+    setImageSearchBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/employee/product-image-search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: editing.id }) });
+      const payload = await response.json() as { available?: boolean; results?: ProductImageSearchResult[]; error?: string; message?: string };
+      if (!response.ok) throw new Error(payload.error || "Unable to search for product imagery.");
+      if (!payload.available) throw new Error(payload.message || "Image search is not configured.");
+      setImageResults(payload.results ?? []);
+      if (!(payload.results ?? []).length) setMessage("No likely product images were found. Try a verified URL instead.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to search for product imagery.");
+    } finally {
+      setImageSearchBusy(false);
+    }
   }
   async function refresh() {
     const response = await fetch("/api/employee/products", {
@@ -373,7 +447,29 @@ export function InventoryManager({
                   }
                   placeholder="/product-images/UPC.jpg or verified source URL"
                 />
+                <small>Use an official or verified distributor image whenever possible.</small>
               </label>
+              <div className="wide product-media-tools">
+                {form.image && <div className="product-media-preview">
+                  {/* Search and uploaded image URLs are selected by staff and may not be in the Next image allowlist. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={form.image} alt="Selected product photo preview" />
+                  <button type="button" onClick={() => setForm((current) => ({ ...current, image: "", imageSource: "", imageSourceUrl: "" }))}><Trash2 /> Remove image</button>
+                </div>}
+                <div className="product-media-actions">
+                  <label><ImagePlus /> Choose photo<input className="sr-only" type="file" accept="image/*" onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) void uploadImage(file); event.currentTarget.value = ""; }} /></label>
+                  <label><Camera /> Take photo<input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) void uploadImage(file); event.currentTarget.value = ""; }} /></label>
+                  <button type="button" onClick={() => void findImages()} disabled={imageSearchBusy || uploadingImage}>{imageSearchBusy ? <LoaderCircle className="spin" /> : <Search />} Find product image</button>
+                </div>
+                {uploadingImage && <p className="product-media-status"><LoaderCircle className="spin" /> Optimizing and uploading photo…</p>}
+                {imageResults.length > 0 && <div className="product-image-results" aria-label="Product image search results">
+                  {imageResults.map((result) => <button type="button" key={result.id} onClick={() => setForm((current) => ({ ...current, image: result.imageUrl, imageSource: result.source, imageSourceUrl: result.sourceUrl }))}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={result.imageUrl} alt="" />
+                    <span><b>{result.source}</b><small>{result.title}</small></span>
+                  </button>)}
+                </div>}
+              </div>
               <label className="wide">
                 Description
                 <textarea
@@ -384,7 +480,7 @@ export function InventoryManager({
                 />
               </label>
             </div>
-            <Button onClick={() => void saveProduct()}>
+            <Button disabled={uploadingImage} onClick={() => void saveProduct()}>
               <Save /> Save product
             </Button>
           </section>

@@ -11,6 +11,7 @@ export type PromoProduct = {
 };
 
 export type StorefrontPromo = {
+  key: string;
   active: boolean;
   campaignName: string;
   headline: string;
@@ -23,6 +24,7 @@ export type StorefrontPromo = {
 };
 
 export const DEFAULT_STOREFRONT_PROMO: StorefrontPromo = {
+  key: "homepage",
   active: true,
   campaignName: "Geek Bar Pulse drop",
   headline: "THE NEW PULSE JUST LANDED.",
@@ -57,6 +59,7 @@ function normalizeProducts(value: unknown): PromoProduct[] {
 export function normalizeStorefrontPromo(value: unknown): StorefrontPromo {
   const promo = (value ?? {}) as Record<string, unknown>;
   return {
+    key: text(promo.key, DEFAULT_STOREFRONT_PROMO.key, 80),
     active: promo.active === undefined ? DEFAULT_STOREFRONT_PROMO.active : Boolean(promo.active),
     campaignName: text(promo.campaignName ?? promo.campaign_name, DEFAULT_STOREFRONT_PROMO.campaignName, 80),
     headline: text(promo.headline, DEFAULT_STOREFRONT_PROMO.headline, 90),
@@ -69,16 +72,16 @@ export function normalizeStorefrontPromo(value: unknown): StorefrontPromo {
   };
 }
 
-export async function getStorefrontPromo(): Promise<StorefrontPromo> {
+export async function getStorefrontPromos(): Promise<StorefrontPromo[]> {
   try {
     const response = await fetch(`${MEDUSA_BACKEND_URL}/store/storefront-promo`, {
       headers: storeHeaders(),
       next: { revalidate: 30, tags: ["storefront-promo"] },
     });
-    if (!response.ok) return DEFAULT_STOREFRONT_PROMO;
-    const payload = await response.json() as { promo?: unknown };
-    return normalizeStorefrontPromo(payload.promo);
+    if (!response.ok) return [DEFAULT_STOREFRONT_PROMO];
+    const payload = await response.json() as { promos?: unknown[] };
+    return Array.isArray(payload.promos) ? payload.promos.map(normalizeStorefrontPromo) : [DEFAULT_STOREFRONT_PROMO];
   } catch {
-    return DEFAULT_STOREFRONT_PROMO;
+    return [DEFAULT_STOREFRONT_PROMO];
   }
 }

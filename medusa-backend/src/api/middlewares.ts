@@ -15,5 +15,9 @@ export default defineMiddlewares({
       matcher: "/admin/storefront-promo",
       middlewares: [authenticate("user", ["session", "bearer"])],
     },
+    {
+      matcher: "/admin/storefront-content",
+      middlewares: [authenticate("user", ["session", "bearer"])],
+    },
   ],
 })

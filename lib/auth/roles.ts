@@ -13,12 +13,13 @@ export type Permission =
   | "pickup.override"
   | "customers.read"
   | "promos.write"
+  | "content.write"
   | "employees.manage"
   | "settings.write";
 
 const permissions: Record<EmployeeRole, Permission[]> = {
-  admin: ["dashboard.read", "products.read", "products.write", "inventory.write", "orders.read", "orders.write", "pickup.read", "pickup.verify", "pickup.complete", "pickup.override", "customers.read", "promos.write", "employees.manage", "settings.write"],
-  manager: ["dashboard.read", "products.read", "products.write", "inventory.write", "orders.read", "orders.write", "pickup.read", "pickup.verify", "pickup.complete", "pickup.override", "customers.read", "promos.write"],
+  admin: ["dashboard.read", "products.read", "products.write", "inventory.write", "orders.read", "orders.write", "pickup.read", "pickup.verify", "pickup.complete", "pickup.override", "customers.read", "promos.write", "content.write", "employees.manage", "settings.write"],
+  manager: ["dashboard.read", "products.read", "products.write", "inventory.write", "orders.read", "orders.write", "pickup.read", "pickup.verify", "pickup.complete", "pickup.override", "customers.read", "promos.write", "content.write"],
   employee: ["dashboard.read", "products.read", "orders.read", "orders.write", "pickup.read", "pickup.verify", "pickup.complete"],
 };
 
