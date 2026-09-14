@@ -1,0 +1,26 @@
+.scene { --chrome-height: 110px; position: relative; height: 270svh; background: var(--black); color: var(--white); }
+.pin { position: sticky; top: var(--chrome-height); height: calc(100svh - var(--chrome-height)); min-height: 300px; display: flex; flex-direction: column; justify-content: center; isolation: isolate; }
+.visual { position: relative; flex: 1; min-height: 0; width: 100%; }
+.video, .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.still { background: var(--black) url('/videos/upnsmoke-storefront-poster.jpg') center / contain no-repeat; }
+.video { opacity: 0; transition: opacity 350ms ease; }
+.scene[data-ready='true'] .video { opacity: 1; }
+.scene[data-failed='true'] .video { opacity: 0; }
+.scene[data-failed='true'] .still { background-image: url('/videos/upnsmoke-storefront-interior.jpg'); }
+.copy { position: relative; padding: 22px 4vw 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px; background: var(--black); }
+.copy::before { content: ''; position: absolute; bottom: 100%; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, var(--black)); pointer-events: none; }
+.copy h1 { margin: 0; max-width: 70%; font: 900 clamp(30px, 4.6vw, 72px)/.95 var(--font-display); letter-spacing: -.04em; text-transform: uppercase; text-wrap: balance; }
+.copy h1 em { color: var(--acid); font-style: normal; }
+.copy a { flex-shrink: 0; margin: 0; }
+@media (max-width: 700px) {
+  .scene { height: 180svh; }
+  .copy { padding: 20px 20px 28px; flex-direction: column; align-items: flex-start; gap: 20px; }
+  .copy h1 { max-width: 100%; font-size: clamp(32px, 10vw, 54px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene { height: auto; }
+  .pin { position: relative; top: auto; }
+  .scene .video { display: none; }
+  .still { background-image: url('/videos/upnsmoke-storefront-interior.jpg'); animation: reveal 300ms ease-out; }
+}
+@keyframes reveal { from { opacity: .6; } to { opacity: 1; } }
