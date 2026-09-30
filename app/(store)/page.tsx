@@ -1,22 +1,17 @@
-import { ArrowUpRight, Clock3, MapPin, ScanLine } from "lucide-react";
-import Link from "next/link";
+import { Clock3, MapPin, ScanLine } from "lucide-react";
 import { ProductCard } from "@/components/storefront/product-card";
-import { CinematicScrollHero } from "@/components/storefront/cinematic-scroll-hero";
+import { PromotionalHero } from "@/components/storefront/promotional-hero";
 import { PromoLanding } from "@/components/storefront/promo-landing";
 import { getCatalog } from "@/lib/medusa/catalog";
 import { getStorefrontPromos } from "@/lib/promo";
-import { getStorefrontContent } from "@/lib/storefront-content";
 
 export default async function HomePage() {
-  const [products, promos, content] = await Promise.all([getCatalog(), getStorefrontPromos(), getStorefrontContent()]);
+  const [products, promos] = await Promise.all([getCatalog(), getStorefrontPromos()]);
   const featured = products.slice(0, 4);
 
   return (
     <main>
-      <CinematicScrollHero>
-        <h1>{content.home.titleTop} <em>{content.home.titleAccent}</em> {content.home.titleBottom}</h1>
-        <Link href="/menu" className="hero-cta">{content.home.ctaLabel} <ArrowUpRight aria-hidden="true" /></Link>
-      </CinematicScrollHero>
+      <PromotionalHero />
       {promos.length > 0 && <PromoLanding promos={promos} catalog={products} />}
       <section className="ticker" aria-label="Store benefits">
         <div>GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦ PICKUP ONLY ✦ 21+ ID REQUIRED ✦ MANCHESTER NH ✦ GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦</div>
