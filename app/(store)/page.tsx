@@ -1,26 +1,15 @@
-import { ArrowDownRight, ArrowUpRight, Clock3, MapPin, ScanLine } from "lucide-react";
-import Link from "next/link";
+import { Clock3, MapPin, ScanLine } from "lucide-react";
 import { ProductCard } from "@/components/storefront/product-card";
-import { PromoLanding } from "@/components/storefront/promo-landing";
+import { PromotionalHero } from "@/components/storefront/promotional-hero";
 import { getCatalog } from "@/lib/medusa/catalog";
-import { getStorefrontPromo } from "@/lib/promo";
 
 export default async function HomePage() {
-  const [products, promo] = await Promise.all([getCatalog(), getStorefrontPromo()]);
+  const products = await getCatalog();
   const featured = products.slice(0, 4);
 
   return (
     <main>
-      {promo.active ? <PromoLanding promo={promo} catalog={products} /> : <section className="home-hero">
-        <div className="hero-grid" aria-hidden="true" />
-        <div className="hero-kicker"><span>01</span> Manchester’s 21+ pickup counter</div>
-        <h1><span>FLAVOR.</span><br /><em>LOCKED.</em><br /><span>LOCAL.</span></h1>
-        <Link href="/menu" className="hero-cta">Browse the live wall <ArrowUpRight /></Link>
-        <div className="hero-orbit orbit-one">15<small>min</small></div>
-        <div className="hero-orbit orbit-two">ID<small>ready</small></div>
-        <div className="hero-stamp"><ScanLine /><span>GEEK BAR + RAZ<br />LOCAL PICKUP</span></div>
-        <a href="#featured" className="hero-scroll"><ArrowDownRight /> See featured flavors</a>
-      </section>}
+      <PromotionalHero />
 
       <section className="ticker" aria-label="Store benefits">
         <div>GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦ PICKUP ONLY ✦ 21+ ID REQUIRED ✦ MANCHESTER NH ✦ GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦</div>
