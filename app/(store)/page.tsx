@@ -1,31 +1,28 @@
-import { Clock3, MapPin, ScanLine } from "lucide-react";
 import { ProductCard } from "@/components/storefront/product-card";
-import { PromotionalHero } from "@/components/storefront/promotional-hero";
+import { FallHero } from "@/components/storefront/fall-hero";
+import { FallMarquee } from "@/components/storefront/fall-marquee";
+import { FallBenefits } from "@/components/storefront/fall-benefits";
+import { FallLeafFrame } from "@/components/storefront/fall-leaf-frame";
 import { PromoLanding } from "@/components/storefront/promo-landing";
 import { getCatalog } from "@/lib/medusa/catalog";
 import { getStorefrontPromos } from "@/lib/promo";
+import { getStorefrontSeason } from "@/lib/season";
 
 export default async function HomePage() {
   const [products, promos] = await Promise.all([getCatalog(), getStorefrontPromos()]);
   const featured = products.slice(0, 4);
 
   return (
-    <main>
-      <PromotionalHero />
-      {promos.length > 0 && <PromoLanding promos={promos} catalog={products} />}
-      <section className="ticker" aria-label="Store benefits">
-        <div>GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦ PICKUP ONLY ✦ 21+ ID REQUIRED ✦ MANCHESTER NH ✦ GEEK BAR ✦ RAZ ✦ LIVE INVENTORY ✦</div>
-      </section>
-
-      <section className="proof-strip">
-        <article><Clock3 /><span>Fast lane</span><strong>15-20 min</strong></article>
-        <article><MapPin /><span>Your counter</span><strong>655 S Willow</strong></article>
-        <article><ScanLine /><span>Stock signal</span><strong>Medusa live</strong></article>
-      </section>
+    <main className="fall-home">
+      <FallHero season={getStorefrontSeason()} />
+      <FallMarquee />
+      <FallBenefits />
+      {promos.length > 0 && <PromoLanding promos={promos} catalog={products} headingLevel="h2" />}
 
       <section id="featured" className="featured-drop">
+        <FallLeafFrame />
         <div className="section-heading">
-          <div><span className="eyebrow">Featured devices / verified product imagery</span><h2>LATEST<br /><em>DROP.</em></h2></div>
+          <div><span className="eyebrow">Fresh picks / local pickup</span><h2>LATEST<br /><em>DROP.</em></h2></div>
           <p>Shop by the exact device and flavor: puff rating, nicotine level, price, and local quantity are visible before you reserve.</p>
         </div>
         <div className="featured-grid">
@@ -37,7 +34,7 @@ export default async function HomePage() {
         <div className="manifesto-number">03</div>
         <div><span className="eyebrow">The no-wait ritual</span><h2>CLICK.<br />ROLL IN.<br /><em>ROLL OUT.</em></h2></div>
         <ol>
-          <li><b>01</b><span>Browse the live wall</span></li>
+          <li><b>01</b><span>Browse the menu</span></li>
           <li><b>02</b><span>Reserve your pickup</span></li>
           <li><b>03</b><span>Show ID at the counter</span></li>
         </ol>

@@ -1,0 +1,143 @@
+/* Campaign styles stay on the homepage and its header variant. */
+.fall-home, .store-header.is-fall {
+  --fall-bg: #070a07;
+  --fall-bg-2: #0d130d;
+  --fall-olive: rgba(60,68,28,.62);
+  --fall-border: rgba(244,255,53,.16);
+  --fall-cream: #f3ead2;
+  --fall-neon: var(--acid);
+  --fall-amber: #ff9a1f;
+  --fall-orange: #e8641a;
+  --fall-brown: #5a3418;
+}
+
+.fall-home, .store-header.is-fall {
+  --font-display: var(--font-fall-display), "Arial Narrow", sans-serif;
+  --font-body: var(--font-fall-body), sans-serif;
+  font-family: var(--font-body);
+}
+
+.fall-home { overflow: clip; color: var(--fall-cream); background: var(--fall-bg); }
+.fall-home :is(a, button):focus-visible { outline: 3px solid var(--fall-neon); outline-offset: 4px; }
+.fall-home .eyebrow { color: #c8ccb0; font-size: 10px; line-height: 1.4; }
+
+/* Ancestor selectors follow the header's route-scoped class, never other routes. */
+.store-chrome:has(.store-header.is-fall) { --font-display: var(--font-fall-display), "Arial Narrow", sans-serif; --font-body: var(--font-fall-body), sans-serif; font-family: var(--font-body); background: #070a07; }
+.store-chrome:has(.store-header.is-fall) .nicotine-warning { min-height: 40px; padding: 7px 18px; border-width: 0 0 1px; border-color: rgba(243,234,210,.15); color: #f3ead2; background: #0d130d; }
+.store-chrome:has(.store-header.is-fall) .nicotine-warning strong { font: 700 clamp(13px,1vw,15px)/1.3 var(--font-body); }
+.store-header-shell:has(.store-header.is-fall) { background: #070a07; }
+.store-header.is-fall { border: 1px solid var(--fall-border); color: var(--fall-cream); background: linear-gradient(120deg, rgba(60,68,28,.86), rgba(25,33,20,.94)); box-shadow: 0 12px 35px rgba(0,0,0,.28), inset 0 1px rgba(243,234,210,.06); border-radius: 18px; }
+.store-header.is-fall .brand-mark { min-width: 96px; }
+.store-header.is-fall :is(.header-shortcuts a, .category-popover summary) { color: var(--fall-cream); }
+.store-header.is-fall :is(.header-shortcuts a:hover, .category-popover summary:hover, .category-popover[open] summary) { color: var(--fall-neon); background: rgba(244,255,53,.08); }
+.store-header.is-fall :is(.header-icon, .header-cart) { min-width: 44px; min-height: 44px; color: var(--fall-neon); border-color: var(--fall-border); background: rgba(7,10,7,.55); }
+.store-header.is-fall .header-cart b { color: var(--fall-bg); background: var(--fall-neon); }
+.store-header.is-fall .category-popover > div { color: var(--fall-cream); border-color: var(--fall-border); background: #182014; }
+.store-header.is-fall .category-popover > div a { min-height: 44px; }
+.store-header.is-fall :is(a, button, summary):focus-visible { outline: 3px solid var(--fall-neon); outline-offset: -3px; }
+
+.fall-home .fall-marquee { height: 87px; display: flex; align-items: center; overflow: hidden; background: var(--fall-bg); }
+.fall-home .fall-marquee-band { width: calc(100% + 40px); flex: none; margin-left: -20px; padding: 12px 0; transform: rotate(-1.8deg); color: var(--fall-bg); background: var(--fall-neon); }
+.fall-home .fall-marquee-track { display: flex; width: max-content; animation: fall-marquee-scroll 24s linear infinite; }
+.fall-home .fall-marquee-group { display: flex; flex: none; gap: 26px; padding-right: 26px; }
+.fall-home .fall-marquee-track span { white-space: nowrap; font: 800 26px/1 var(--font-display); letter-spacing: .05em; }
+@keyframes fall-marquee-scroll { to { transform: translateX(-50%); } }
+
+.fall-home .fall-benefits { width: min(1180px,90%); margin: 35px auto 0; padding-block: 28px; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-block: 1px solid var(--fall-border); }
+.fall-home .fall-benefits article { display: flex; align-items: flex-start; gap: 15px; padding: 4px 25px; border-right: 1px solid var(--fall-border); }
+.fall-home .fall-benefits article:first-child { padding-left: 0; }
+.fall-home .fall-benefits article:last-child { padding-right: 0; border-right: 0; }
+.fall-home .fall-benefits svg { flex: none; width: 24px; height: 24px; margin-top: 3px; color: var(--fall-neon); stroke-width: 1.5; }
+.fall-home .fall-benefits span { display: block; margin-bottom: 9px; color: #c8ccb0; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+.fall-home .fall-benefits strong { display: block; font: 700 22px/1.15 var(--font-display); }
+.fall-home .fall-benefits p { margin: 8px 0 0; color: #c8ccb0; font-size: 11px; line-height: 1.5; }
+
+.fall-home .featured-drop { position: relative; isolation: isolate; width: min(1320px,100%); margin-inline: auto; padding: 95px 70px 100px; }
+.fall-home .section-heading { grid-template-columns: 1fr .6fr; gap: 55px; margin-bottom: 38px; }
+.fall-home .section-heading h2 { margin-top: 18px; font-size: clamp(90px,9vw,130px); line-height: .79; }
+.fall-home .section-heading h2 em { color: var(--fall-neon); }
+.fall-home .section-heading p { margin-bottom: 0; color: #c8ccb0; font-size: 13px; line-height: 1.7; }
+.fall-home .featured-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 17px; align-items: stretch; }
+.fall-home .signal-card { display: flex; flex-direction: column; border: 1px solid var(--fall-border); color: var(--fall-cream); background: linear-gradient(145deg, var(--fall-olive), rgba(25,33,20,.9)); box-shadow: 0 16px 36px rgba(0,0,0,.2); border-radius: 20px; }
+.fall-home .signal-card.is-featured { grid-row: auto; }
+.fall-home .signal-card:hover { box-shadow: 0 20px 40px rgba(0,0,0,.3); }
+.fall-home .signal-card-head { min-height: 92px; flex-wrap: wrap; gap: 10px; padding: 16px; background: transparent; border-bottom: 0; }
+.fall-home .signal-card-head > div { gap: 5px; }
+.fall-home .signal-card-head span { font-size: 9px; letter-spacing: .12em; color: #d2d6bb; }
+.fall-home .signal-card-head strong { font-size: 18px; }
+.fall-home .signal-card-head > b { padding: 6px 8px; border-color: rgba(243,234,210,.24); color: var(--fall-cream); font-size: 8px; }
+.fall-home .signal-card-head > b.is-live i { background: var(--fall-neon); box-shadow: none; }
+.fall-home .signal-image, .fall-home .is-featured .signal-image { flex: none; height: 240px; margin: 0 10px; border-radius: 12px; background: #f3ead2; }
+.fall-home .signal-image img { padding: 24px; }
+.fall-home .signal-image img.product-image-fallback { padding: 42px; background: #f3ead2; }
+.fall-home .signal-index { max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; letter-spacing: .05em; color: var(--fall-bg); background: #e4ddc6; }
+.fall-home .signal-view { right: 9px; bottom: 9px; padding: 8px 9px; font-size: 8px; color: var(--fall-cream); background: var(--fall-bg); }
+.fall-home .signal-view svg { color: var(--fall-neon); }
+.fall-home .signal-info { flex: 1; grid-template-columns: minmax(0,1fr); gap: 16px; padding: 19px 16px 16px; border-top: 0; }
+.fall-home .signal-info span { color: #d2d6bb; font-size: 8px; line-height: 1.5; letter-spacing: .06em; }
+.fall-home .signal-info h3 { margin-block: 8px; font-size: 31px; line-height: .98; overflow-wrap: anywhere; }
+.fall-home .signal-info p { color: #c8ccb0; font-size: 11px; line-height: 1.55; }
+.fall-home .signal-buy { flex-direction: row; align-items: center; gap: 10px; margin-top: auto; }
+.fall-home .signal-buy strong { font-size: 29px; }
+.fall-home .signal-buy button { width: auto; min-width: 48px; padding: 0 12px; border-radius: 12px; border-color: var(--fall-neon); color: var(--fall-bg); background: var(--fall-neon); }
+.fall-home .signal-buy button:disabled { color: #c8ccb0; background: #283020; border-color: rgba(243,234,210,.25); }
+.fall-home .signal-specs { margin-inline: 16px; border-color: var(--fall-border); }
+.fall-home .signal-specs div { border-color: var(--fall-border); padding-right: 5px; min-width: 0; }
+.fall-home .signal-specs dt { color: #c8ccb0; font-size: 9px; letter-spacing: .06em; }
+.fall-home .signal-specs dd { font-size: 16px; overflow-wrap: anywhere; }
+.fall-home .signal-detail { min-height: 44px; padding-top: 10px; margin: 0 16px 10px; color: var(--fall-neon); font-size: 9px; }
+
+.fall-home .fall-leaf-frame { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; }
+.fall-home .fall-leaf { position: absolute; width: 65px; height: auto; opacity: .75; }
+.fall-home .fall-leaf-1 { left: -17px; top: 130px; transform: rotate(-25deg); }
+.fall-home .fall-leaf-2 { right: -20px; top: 380px; transform: rotate(22deg); }
+.fall-home .fall-leaf-3 { left: -18px; bottom: 40px; transform: rotate(40deg); }
+
+.fall-home .pickup-manifesto { background: var(--fall-bg-2); border-color: var(--fall-border); padding: 75px max(5vw, calc((100vw - 1180px) / 2)); }
+.fall-home .pickup-manifesto h2 { font-size: clamp(65px,7vw,105px); }
+.fall-home .pickup-manifesto h2 em { color: var(--fall-neon); -webkit-text-stroke: 0; }
+.fall-home .manifesto-number { border-color: var(--fall-border); color: var(--fall-neon); }
+.fall-home .pickup-manifesto li { border-color: var(--fall-border); font-size: 12px; line-height: 1.5; }
+.fall-home .pickup-manifesto li b { color: var(--fall-neon); }
+.fall-home .promo-copy h2 { margin: 0; font: 900 clamp(64px,6.15vw,105px)/.8 var(--font-display); letter-spacing: -.045em; text-transform: uppercase; text-wrap: balance; }
+.fall-home .promo-rotation button { min-width: 44px; min-height: 44px; }
+
+@media (max-width: 1100px) {
+  .fall-home .featured-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px; }
+  .fall-home .signal-card-head { min-height: 76px; }
+  .fall-home .signal-image, .fall-home .is-featured .signal-image { height: 300px; }
+  .fall-home .featured-drop { padding-inline: 5vw; }
+  .fall-home .fall-leaf { width: 4vw; }
+  .fall-home .fall-benefits article { padding-inline: 15px; gap: 10px; }
+  .fall-home .fall-benefits strong { font-size: 20px; }
+}
+
+@media (max-width: 680px) {
+  .store-header.is-fall { border-radius: 15px; }
+  .store-chrome:has(.store-header.is-fall) .nicotine-warning { min-height: 44px; padding: 6px 12px; }
+  .store-chrome:has(.store-header.is-fall) .nicotine-warning strong { font-size: 14px; }
+  .fall-home .fall-marquee { height: 70px; }
+  .fall-home .fall-marquee-track span { font-size: 22px; }
+  .fall-home .fall-benefits { width: calc(100% - 44px); margin-top: 20px; padding-block: 7px; grid-template-columns: 1fr; }
+  .fall-home .fall-benefits article { padding: 20px 0; gap: 16px; border-right: 0; border-bottom: 1px solid var(--fall-border); }
+  .fall-home .fall-benefits article:last-child { border-bottom: 0; }
+  .fall-home .fall-benefits span { margin-bottom: 6px; }
+  .fall-home .featured-drop { padding: 68px 22px; }
+  .fall-home .section-heading { grid-template-columns: 1fr; gap: 22px; margin-bottom: 30px; }
+  .fall-home .section-heading h2 { font-size: 104px; }
+  .fall-home .section-heading p { max-width: 340px; font-size: 12px; }
+  .fall-home .featured-grid { grid-template-columns: 1fr; }
+  .fall-home .signal-card-head { padding: 18px; }
+  .fall-home .signal-image, .fall-home .is-featured .signal-image { height: 310px; margin-inline: 12px; }
+  .fall-home .signal-info { padding-inline: 20px; }
+  .fall-home .signal-info h3 { font-size: 38px; }
+  .fall-home .signal-specs, .fall-home .signal-detail { margin-inline: 20px; }
+  .fall-home .fall-leaf { width: 28px; opacity: .6; }
+  .fall-home .pickup-manifesto { padding: 60px 22px; gap: 28px; }
+  .fall-home .pickup-manifesto h2 { font-size: 80px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fall-home .fall-marquee-track { animation: none; transform: translateX(32px); }
+  .fall-home .signal-card, .fall-home .signal-image img, .fall-home .signal-buy button { transition: none; }
+}

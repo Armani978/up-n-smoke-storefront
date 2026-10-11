@@ -72,7 +72,7 @@ button { cursor: pointer; }
 .drawer-categories { padding: 18px 0 4px; border-bottom: 1px solid rgba(255,255,255,.14); }
 .drawer-categories > span { color: var(--acid); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .drawer-categories > div { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 9px; }
-.drawer-categories a { min-height: 42px !important; padding: 0 14px; display: inline-flex !important; grid-template-columns: none !important; border: 1px solid rgba(244,255,53,.42) !important; border-radius: 999px; color: var(--white) !important; font: 800 13px/1 var(--font-body) !important; }
+.drawer-categories a { min-height: 44px !important; padding: 0 14px; display: inline-flex !important; grid-template-columns: none !important; border: 1px solid rgba(244,255,53,.42) !important; border-radius: 999px; color: var(--white) !important; font: 800 13px/1 var(--font-body) !important; }
 .drawer-categories a:hover, .drawer-categories a:focus-visible { border-color: var(--acid) !important; color: var(--ink) !important; background: var(--acid); outline: none; }
 .product-media-tools { display: grid; gap: 12px; }
 .product-media-preview { display: flex; align-items: center; gap: 12px; }

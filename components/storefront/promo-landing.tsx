@@ -10,7 +10,8 @@ function safeHref(href: string) {
   return href.startsWith("/") || href.startsWith("https://") ? href : "/menu";
 }
 
-export function PromoLanding({ promos, catalog }: { promos: StorefrontPromo[]; catalog: StoreProduct[] }) {
+export function PromoLanding({ promos, catalog, headingLevel = "h1" }: { promos: StorefrontPromo[]; catalog: StoreProduct[]; headingLevel?: "h1" | "h2" }) {
+  const Heading = headingLevel;
   const [selected, setSelected] = useState(0);
   useEffect(() => {
     if (promos.length < 2) return;
@@ -34,7 +35,7 @@ export function PromoLanding({ promos, catalog }: { promos: StorefrontPromo[]; c
     <>
       <section className="promo-hero">
         <div className="promo-copy">
-          <h1>{promo.headline}</h1>
+          <Heading>{promo.headline}</Heading>
           <p>{promo.supportingCopy}</p>
           <Link href={safeHref(promo.ctaHref)} className="promo-primary-action">
             {promo.ctaLabel}<ArrowUpRight aria-hidden="true" />

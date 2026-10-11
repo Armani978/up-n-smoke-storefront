@@ -4,17 +4,18 @@ import { StoreProviders } from "@/components/storefront/providers";
 import { getCatalog } from "@/lib/medusa/catalog";
 import "./globals.css";
 import "./promo.css";
+import "./fall-after-dark.css";
 
 const display = Barlow_Condensed({
   subsets: ["latin"],
   weight: ["600", "700", "800", "900"],
-  variable: "--font-display",
+  variable: "--font-fall-display",
   display: "swap",
 });
 
 const body = Archivo({
   subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-fall-body",
   display: "swap",
 });
 

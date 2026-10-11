@@ -92,7 +92,7 @@ export function StoreHeader({ categories }: { categories: string[] }) {
   return (
     <>
       <div className="store-header-shell">
-        <header className="store-header">
+        <header className={`store-header${pathname === "/" ? " is-fall" : ""}`}>
           <Link href="/" className="brand-mark" aria-label="UP N SMOKE home">
             <Image src={logo} alt="UP N SMOKE" priority sizes="96px" />
           </Link>
