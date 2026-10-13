@@ -3,7 +3,9 @@ import { FallHero } from "@/components/storefront/fall-hero";
 import { FallMarquee } from "@/components/storefront/fall-marquee";
 import { FallBenefits } from "@/components/storefront/fall-benefits";
 import { FallLeafFrame } from "@/components/storefront/fall-leaf-frame";
-import { PromoLanding } from "@/components/storefront/promo-landing";
+import { HeroRotator } from "@/components/storefront/hero-rotator";
+import { PromoProducts } from "@/components/storefront/promo-products";
+import { PromoSlide } from "@/components/storefront/promo-slide";
 import { getCatalog } from "@/lib/medusa/catalog";
 import { getStorefrontPromos } from "@/lib/promo";
 import { getStorefrontSeason } from "@/lib/season";
@@ -14,10 +16,13 @@ export default async function HomePage() {
 
   return (
     <main className="fall-home">
-      <FallHero season={getStorefrontSeason()} />
+      <HeroRotator labels={["Fall After Dark", ...promos.map((promo) => promo.campaignName)]}>
+        <FallHero season={getStorefrontSeason()} />
+        {promos.map((promo) => <PromoSlide key={promo.key} promo={promo} />)}
+      </HeroRotator>
       <FallMarquee />
       <FallBenefits />
-      {promos.length > 0 && <PromoLanding promos={promos} catalog={products} headingLevel="h2" />}
+      <PromoProducts promos={promos} catalog={products} />
 
       <section id="featured" className="featured-drop">
         <FallLeafFrame />
