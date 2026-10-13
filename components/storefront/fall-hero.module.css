@@ -1,0 +1,189 @@
+.hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 610px;
+  padding: 72px max(5vw, calc((100vw - 1180px) / 2)) 80px;
+  overflow: clip;
+  color: var(--fall-cream);
+  background: var(--fall-bg);
+}
+
+/* Depth layer 1: artwork. --px/--py come from the rotator's pointer parallax (0 when idle). */
+.art {
+  position: absolute;
+  z-index: -3;
+  inset: 0;
+  background-color: #0c0f0a;
+  background-image: radial-gradient(ellipse at 80% 70%, #5a3418 0, #182016 38%, #070a07 73%);
+  transform: translate3d(calc(var(--px, 0) * -14px), calc(var(--py, 0) * -10px), 0);
+  transition: transform .55s var(--ease-cinematic);
+  will-change: transform;
+}
+
+.hero[data-season="harvest"] .art { background-color: #0e1109; }
+.picture { display: block; width: 100%; height: 100%; transform: scale(1.06); }
+.picture[hidden] { display: none; }
+.image { width: 100%; height: 100%; object-fit: cover; object-position: 72% 72%; }
+
+.glow {
+  position: absolute;
+  right: 6%;
+  bottom: -8%;
+  width: min(46vw, 640px);
+  height: min(46vw, 640px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,154,31,.28), rgba(232,100,26,.12) 36%, transparent 62%);
+  mix-blend-mode: screen;
+  animation: glowPulse 4.8s ease-in-out infinite;
+}
+
+/* Depth layer 2: atmosphere (mist, embers, falling leaves) moves faster than the art. */
+.atmosphere {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
+  transform: translate3d(calc(var(--px, 0) * -24px), calc(var(--py, 0) * -16px), 0);
+  transition: transform .55s var(--ease-cinematic);
+  will-change: transform;
+}
+
+.mist {
+  position: absolute;
+  left: -20%;
+  bottom: -6%;
+  width: 140%;
+  height: 46%;
+  background: radial-gradient(ellipse at 50% 60%, rgba(243,234,210,.13), rgba(243,234,210,.04) 45%, transparent 68%);
+  animation: mistDrift var(--mist-dur) ease-in-out infinite alternate;
+}
+.mistBack { --mist-dur: 28s; opacity: .8; }
+.mistFront { --mist-dur: 21s; height: 32%; bottom: -10%; animation-direction: alternate-reverse; }
+
+.embers i {
+  position: absolute;
+  left: var(--x);
+  bottom: 16%;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: #ffb347;
+  box-shadow: 0 0 8px 2px rgba(255,154,31,.5);
+  opacity: 0;
+  animation: emberRise var(--dur) linear infinite;
+  animation-delay: var(--delay);
+}
+
+.leaves img {
+  position: absolute;
+  top: -14%;
+  left: var(--x);
+  width: 140px;
+  height: 160px;
+  opacity: 0;
+  transform-origin: 50% 40%;
+  animation: leafFall var(--dur) linear infinite;
+  animation-delay: var(--delay);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(7,10,7,.96), rgba(7,10,7,.65) 35%, rgba(7,10,7,.05) 65%), linear-gradient(0deg, var(--fall-bg), transparent 22%);
+  pointer-events: none;
+}
+
+/* Depth layer 3: copy drifts slightly against the art. */
+.content {
+  position: relative;
+  max-width: 45%;
+  transform: translate3d(calc(var(--px, 0) * 6px), calc(var(--py, 0) * 4px), 0);
+  transition: transform .55s var(--ease-cinematic);
+}
+.label { display: flex; gap: 10px; align-items: center; font-size: 10px; font-weight: 750; letter-spacing: .19em; }
+.label i { width: 6px; height: 6px; border-radius: 50%; background: var(--fall-amber); box-shadow: 0 0 18px rgba(255,154,31,.45); }
+.headline { margin: 30px 0 25px; font: 900 clamp(82px,8.25vw,132px)/.84 var(--font-display); letter-spacing: -.025em; text-transform: uppercase; }
+.line { display: block; overflow: clip; padding-bottom: .04em; }
+.line > span { display: block; }
+.line:last-child > span { color: var(--fall-neon); white-space: nowrap; }
+.copy { margin: 0; font-size: 17px; line-height: 1.55; color: var(--fall-cream); }
+.cta { min-height: 52px; width: fit-content; margin-top: 28px; padding: 0 22px; display: inline-flex; align-items: center; gap: 35px; border: 1px solid var(--fall-neon); border-radius: 999px; color: var(--fall-neon); background: rgba(7,10,7,.55); font-size: 11px; font-weight: 800; letter-spacing: .1em; transition: background .2s, color .2s, transform .3s var(--ease-cinematic); }
+.cta svg { width: 19px; height: 19px; }
+.cta:hover { background: var(--fall-neon); color: var(--fall-bg); transform: translateY(-2px); }
+.cta:focus-visible { outline: 3px solid var(--fall-cream); outline-offset: 5px; }
+.note { display: block; margin-top: 24px; font-size: 9px; line-height: 1.6; font-weight: 600; letter-spacing: .08em; color: #d0d0b7; }
+.note span { margin-inline: 7px; }
+.edition { position: absolute; right: max(5vw, calc((100vw - 1180px) / 2)); bottom: 48px; color: var(--fall-cream); font-size: 9px; letter-spacing: .2em; }
+
+/* Staggered entrance each time this slide becomes the active one. */
+:global(.hero-slide[data-state="active"]) .label { animation: fadeUp var(--dur-reveal) var(--ease-cinematic) both; animation-delay: calc(var(--stagger) * 1); }
+:global(.hero-slide[data-state="active"]) .line > span { animation: maskUp .95s var(--ease-cinematic) both; }
+:global(.hero-slide[data-state="active"]) .line:nth-child(1) > span { animation-delay: calc(var(--stagger) * 2); }
+:global(.hero-slide[data-state="active"]) .line:nth-child(2) > span { animation-delay: calc(var(--stagger) * 3); }
+:global(.hero-slide[data-state="active"]) .copy { animation: fadeUp var(--dur-reveal) var(--ease-cinematic) both; animation-delay: calc(var(--stagger) * 5); }
+:global(.hero-slide[data-state="active"]) .cta { animation: fadeUp var(--dur-reveal) var(--ease-cinematic) both; animation-delay: calc(var(--stagger) * 6); }
+:global(.hero-slide[data-state="active"]) .note { animation: fadeUp var(--dur-reveal) var(--ease-cinematic) both; animation-delay: calc(var(--stagger) * 7); }
+:global(.hero-slide[data-state="active"]) .edition { animation: fadeUp var(--dur-reveal) var(--ease-cinematic) both; animation-delay: calc(var(--stagger) * 8); }
+
+/* Atmosphere only runs on the visible slide while the hero is on screen. */
+:global(.hero-slide:not([data-state="active"])) :is(.atmosphere *, .glow),
+:global(.hero-rotator[data-inview="false"]) :is(.atmosphere *, .glow) { animation-play-state: paused; }
+
+/* Scroll-driven exit: art zooms and dims, copy lifts away as the hero scrolls out. No JS scroll listeners. */
+@supports (animation-timeline: view()) {
+  .picture { animation: artExit linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
+  .contentInner { animation: contentExit linear both; animation-timeline: view(); animation-range: exit 0% exit 75%; }
+}
+
+@keyframes fadeUp { from { opacity: 0; transform: translate3d(0, 18px, 0); } }
+@keyframes maskUp { from { transform: translate3d(0, 110%, 0); } }
+@keyframes glowPulse { 0%, 100% { opacity: .72; transform: scale(1); } 42% { opacity: 1; transform: scale(1.05); } 70% { opacity: .84; } }
+@keyframes mistDrift { from { transform: translate3d(-4%, 0, 0); } to { transform: translate3d(4%, -3%, 0); } }
+@keyframes emberRise {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  12% { opacity: .9; }
+  60% { opacity: .55; }
+  100% { transform: translate3d(26px, -340px, 0) scale(.45); opacity: 0; }
+}
+@keyframes leafFall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(var(--scale)); opacity: 0; }
+  8% { opacity: .55; }
+  50% { transform: translate3d(70px, 400px, 0) rotate(150deg) scale(var(--scale)); }
+  90% { opacity: .4; }
+  100% { transform: translate3d(-40px, 820px, 0) rotate(330deg) scale(var(--scale)); opacity: 0; }
+}
+@keyframes artExit { from { transform: scale(1.06); filter: brightness(1); } to { transform: scale(1.15); filter: brightness(.55); } }
+@keyframes contentExit { to { transform: translate3d(0, -70px, 0); opacity: 0; } }
+
+@media (max-width: 999px) {
+  .hero { min-height: 770px; padding: 42px 5vw 360px; }
+  .content { max-width: 620px; }
+  .headline { font-size: clamp(80px,13.8vw,132px); }
+  .image { object-position: 50% 78%; }
+  .glow { right: -12%; bottom: 0; width: 92vw; height: 92vw; }
+  .hero::after { background: linear-gradient(180deg, rgba(7,10,7,.94), rgba(7,10,7,.79) 33%, rgba(7,10,7,.12) 61%, var(--fall-bg) 100%); }
+  .edition { bottom: 36px; }
+}
+
+@media (max-width: 540px) {
+  .hero { min-height: 690px; padding: 35px 22px 300px; }
+  .headline { margin-top: 26px; font-size: clamp(63px,18.5vw,100px); line-height: .9; }
+  .line:first-child > span { font-size: 1.55em; }
+  .copy { margin-top: 22px; font-size: 15px; }
+  .label { font-size: 9px; }
+  .cta { margin-top: 22px; }
+  .note { max-width: 290px; font-size: 8px; }
+  .image { object-position: 50% 78%; }
+  .leaves img { width: 96px; height: 110px; }
+  .edition { right: 22px; bottom: 29px; font-size: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art, .atmosphere, .content, .cta { transition: none; transform: none; }
+  .picture, .contentInner, .glow, .mist, .embers i, .leaves img,
+  :global(.hero-slide[data-state="active"]) :is(.label, .line > span, .copy, .cta, .note, .edition) { animation: none; }
+  .embers, .leaves { display: none; }
+}

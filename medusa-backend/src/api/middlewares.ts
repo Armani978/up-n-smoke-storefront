@@ -7,5 +7,17 @@ export default defineMiddlewares({
       method: "POST",
       middlewares: [authenticate("user", ["session", "bearer"])],
     },
+    {
+      matcher: "/admin/pickup-verifications*",
+      middlewares: [authenticate("user", ["session", "bearer"])],
+    },
+    {
+      matcher: "/admin/storefront-promo",
+      middlewares: [authenticate("user", ["session", "bearer"])],
+    },
+    {
+      matcher: "/admin/storefront-content",
+      middlewares: [authenticate("user", ["session", "bearer"])],
+    },
   ],
 })
